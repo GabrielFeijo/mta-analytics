@@ -1,0 +1,18 @@
+# frontend/.gitignore - Vite / React frontend
+
+node_modules/
+dist/
+build/
+.vite/
+.vite-deps/
+.cache/
+.env
+.env.local
+.env.*.local
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+tsconfig.tsbuildinfo
+*.log
+.vscode/
+.idea/
