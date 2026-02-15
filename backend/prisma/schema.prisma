@@ -1,0 +1,174 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  email     String   @unique
+  password  String
+  role      Role     @default(VIEWER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessions Session[]
+
+  @@map("admins")
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  adminId   Int
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+enum Role {
+  ADMIN
+  MODERATOR
+  VIEWER
+}
+
+model Player {
+  id            Int      @id @default(autoincrement())
+  serial        String   @unique
+  lastUsername  String?
+  totalPlaytime Int      @default(0)
+  firstSeen     DateTime @default(now())
+  lastSeen      DateTime @default(now())
+  isBanned      Boolean  @default(false)
+  riskScore     Float    @default(0.0)
+  metadata      Json?
+
+  events         Event[]
+  sessions       PlayerSession[]
+  transactions   Transaction[]
+  relationships  PlayerRelationship[] @relation("PlayerA")
+  relationshipsB PlayerRelationship[] @relation("PlayerB")
+
+  @@index([serial])
+  @@index([lastSeen])
+  @@index([riskScore])
+  @@map("players")
+}
+
+model PlayerSession {
+  id       Int       @id @default(autoincrement())
+  playerId Int
+  loginAt  DateTime  @default(now())
+  logoutAt DateTime?
+  duration Int?
+  ip       String?
+
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([playerId])
+  @@index([loginAt])
+  @@map("player_sessions")
+}
+
+model Event {
+  id        BigInt   @id @default(autoincrement())
+  timestamp DateTime @default(now())
+  eventType String
+  playerId  Int?
+  positionX Float?
+  positionY Float?
+  positionZ Float?
+  data      Json
+  serverId  String?
+
+  player Player? @relation(fields: [playerId], references: [id], onDelete: SetNull)
+
+  @@index([eventType, timestamp(sort: Desc)])
+  @@index([playerId, timestamp(sort: Desc)])
+  @@index([timestamp(sort: Desc)])
+  @@map("events")
+}
+
+model Transaction {
+  id        BigInt          @id @default(autoincrement())
+  timestamp DateTime        @default(now())
+  playerId  Int
+  type      TransactionType
+  amount    Float
+  balance   Float
+  source    String?
+  metadata  Json?
+
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([playerId, timestamp(sort: Desc)])
+  @@index([type, timestamp(sort: Desc)])
+  @@map("transactions")
+}
+
+enum TransactionType {
+  EARN
+  SPEND
+  TRANSFER_IN
+  TRANSFER_OUT
+  ADMIN_ADD
+  ADMIN_REMOVE
+}
+
+model EconomicMetric {
+  id              Int      @id @default(autoincrement())
+  timestamp       DateTime @default(now())
+  totalMoney      Float
+  moneyInCirc     Float
+  avgPlayerWealth Float
+  inflationRate   Float?
+  metadata        Json?
+
+  @@index([timestamp(sort: Desc)])
+  @@map("economic_metrics")
+}
+
+model PlayerRelationship {
+  id           Int          @id @default(autoincrement())
+  playerAId    Int
+  playerBId    Int
+  type         RelationType
+  strength     Float        @default(1.0)
+  interactions Int          @default(1)
+  firstSeen    DateTime     @default(now())
+  lastSeen     DateTime     @default(now())
+
+  playerA Player @relation("PlayerA", fields: [playerAId], references: [id], onDelete: Cascade)
+  playerB Player @relation("PlayerB", fields: [playerBId], references: [id], onDelete: Cascade)
+
+  @@unique([playerAId, playerBId, type])
+  @@index([playerAId])
+  @@index([playerBId])
+  @@map("player_relationships")
+}
+
+enum RelationType {
+  FRIEND
+  FACTION_MEMBER
+  ENEMY
+  TRADE_PARTNER
+}
+
+model HourlyMetric {
+  id         Int      @id @default(autoincrement())
+  timestamp  DateTime
+  metricName String
+  value      Float
+  metadata   Json?
+
+  @@unique([timestamp, metricName])
+  @@index([timestamp(sort: Desc)])
+  @@map("hourly_metrics")
+}

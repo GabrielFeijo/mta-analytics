@@ -1,0 +1,25 @@
+# backend/.gitignore - NestJS / Node backend
+
+node_modules/
+dist/
+coverage/
+.env
+.env.local
+npm-debug.log*
+yarn-error.log*
+tsconfig.tsbuildinfo
+.cache/
+.prisma/
+prisma/dev.db
+*.log
+.vscode/
+.idea/
+node_modules
+dist
+.env
+.env.local
+.DS_Store
+*.log
+coverage
+.vscode
+.idea

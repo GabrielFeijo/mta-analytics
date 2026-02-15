@@ -1,0 +1,47 @@
+services:
+  postgresql:
+    image: postgres:16-alpine
+    container_name: mta-analytics-postgres
+    restart: unless-stopped
+    ports:
+      - '5432:5432'
+    environment:
+      - POSTGRES_USER=mta_analytics
+      - POSTGRES_PASSWORD=mta_analytics_password
+      - POSTGRES_DB=mta_analytics
+    volumes:
+      - postgresql_data:/var/lib/postgresql/data
+    networks:
+      - mta-analytics-network
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U mta_analytics -d mta_analytics']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: mta-analytics-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    command: redis-server --requirepass redis_password
+    volumes:
+      - redis_data:/data
+    networks:
+      - mta-analytics-network
+    healthcheck:
+      test: ['CMD', 'redis-cli', '--raw', 'incr', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgresql_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  mta-analytics-network:
+    driver: bridge
