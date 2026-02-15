@@ -5,6 +5,10 @@ import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
+    (BigInt.prototype as any).toJSON = function () {
+        return this.toString();
+    };
+
     const app = await NestFactory.create(AppModule, {
         cors: true,
     });
