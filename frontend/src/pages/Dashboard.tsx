@@ -8,6 +8,7 @@ import { formatNumber, formatCurrency } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Overview } from "@/components/dashboard/Overview";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
+import { HeatmapView } from "@/components/dashboard/HeatmapView";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function Dashboard() {
@@ -18,6 +19,12 @@ export default function Dashboard() {
         queryKey: ['dashboard-stats'],
         queryFn: analyticsApi.getDashboardStats,
         refetchInterval: 30000,
+    });
+
+    const { data: overviewData } = useQuery({
+        queryKey: ['dashboard-overview'],
+        queryFn: analyticsApi.getOverviewStats,
+        refetchInterval: 60000,
     });
 
     useEffect(() => {
@@ -75,15 +82,7 @@ export default function Dashboard() {
             <Tabs defaultValue="overview" className="space-y-4">
                 <TabsList>
                     <TabsTrigger value="overview">Overview</TabsTrigger>
-                    <TabsTrigger value="analytics" disabled>
-                        Analytics
-                    </TabsTrigger>
-                    <TabsTrigger value="reports" disabled>
-                        Reports
-                    </TabsTrigger>
-                    <TabsTrigger value="notifications" disabled>
-                        Notifications
-                    </TabsTrigger>
+                    <TabsTrigger value="heatmap">Heatmap</TabsTrigger>
                 </TabsList>
                 <TabsContent value="overview" className="space-y-4">
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -97,7 +96,7 @@ export default function Dashboard() {
                             <CardContent>
                                 <div className="text-2xl font-bold">{formatNumber(stats?.totalPlayers || 0)}</div>
                                 <p className="text-xs text-muted-foreground">
-                                    +5.2% from last month
+                                    {stats?.trends?.playerGrowth || 0}% change (24h)
                                 </p>
                             </CardContent>
                         </Card>
@@ -111,7 +110,7 @@ export default function Dashboard() {
                             <CardContent>
                                 <div className="text-2xl font-bold">{formatNumber(stats?.onlinePlayers || 0)}</div>
                                 <p className="text-xs text-muted-foreground">
-                                    +12 since last hour
+                                    {stats?.trends?.onlineTrend || "+0%"} vs last hour
                                 </p>
                             </CardContent>
                         </Card>
@@ -123,7 +122,7 @@ export default function Dashboard() {
                             <CardContent>
                                 <div className="text-2xl font-bold">{formatCurrency(stats?.economicSnapshot?.moneyInCirc || 0)}</div>
                                 <p className="text-xs text-muted-foreground">
-                                    +19% from last month
+                                    Economy Snapshot
                                 </p>
                             </CardContent>
                         </Card>
@@ -135,9 +134,9 @@ export default function Dashboard() {
                                 <AlertTriangle className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold">15</div>
+                                <div className="text-2xl font-bold">{stats?.riskAlerts || 0}</div>
                                 <p className="text-xs text-muted-foreground">
-                                    +2 since last hour
+                                    Suspicious activities
                                 </p>
                             </CardContent>
                         </Card>
@@ -145,10 +144,10 @@ export default function Dashboard() {
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
                         <Card className="col-span-4">
                             <CardHeader>
-                                <CardTitle>Overview</CardTitle>
+                                <CardTitle>Revenue Overview</CardTitle>
                             </CardHeader>
                             <CardContent className="pl-2">
-                                <Overview />
+                                <Overview data={overviewData || []} />
                             </CardContent>
                         </Card>
                         <Card className="col-span-3">
@@ -163,6 +162,9 @@ export default function Dashboard() {
                             </CardContent>
                         </Card>
                     </div>
+                </TabsContent>
+                <TabsContent value="heatmap">
+                    <HeatmapView />
                 </TabsContent>
             </Tabs>
         </div>

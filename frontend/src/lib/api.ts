@@ -76,6 +76,18 @@ export const analyticsApi = {
         });
         return response.data;
     },
+
+    getResourcesStats: async (hours: number = 24) => {
+        const response = await apiClient.get('/analytics/resources', {
+            params: { hours },
+        });
+        return response.data;
+    },
+
+    getOverviewStats: async () => {
+        const response = await apiClient.get('/analytics/overview');
+        return response.data;
+    }
 };
 
 export const playersApi = {
