@@ -15,5 +15,11 @@
     <script src="client/main.lua" type="client" />
     <script src="client/events/player.lua" type="client" />
     
+    <script src="server/core/exports.lua" type="server" />
+    
+    <export function="logTransaction" type="server" />
+    <export function="logVehiclePurchase" type="server" />
+    <export function="logEvent" type="server" />
+    
     <min_mta_version server="1.5.9" client="1.5.9" />
 </meta>
