@@ -53,8 +53,6 @@ export class ApiKeyGuard implements CanActivate {
             throw new UnauthorizedException('Invalid signature');
         }
 
-        console.log("Deu certo")
-
         return true;
     }
 }
