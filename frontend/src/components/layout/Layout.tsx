@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, DollarSign, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, DollarSign, LogOut, ShoppingCart } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 
 interface LayoutProps {
@@ -15,6 +15,7 @@ export default function Layout({ children }: LayoutProps) {
         { name: 'Dashboard', href: '/', icon: LayoutDashboard },
         { name: 'Players', href: '/players', icon: Users },
         { name: 'Economy', href: '/economy', icon: DollarSign },
+        { name: 'Resources', href: '/resources', icon: ShoppingCart },
     ];
 
     return (
