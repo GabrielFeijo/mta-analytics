@@ -1,0 +1,19 @@
+<meta>
+    <info author="MTA Analytics" version="1.0.0" name="MTA Analytics" description="Event collector for analytics dashboard" />
+    
+    <!-- Server Scripts -->
+    <script src="server/config.lua" type="server" />
+    <script src="server/core/crypto.lua" type="server" />
+    <script src="server/core/queue.lua" type="server" />
+    <script src="server/core/request.lua" type="server" />
+    <script src="server/collectors/player-events.lua" type="server" />
+    <script src="server/collectors/economy-events.lua" type="server" />
+    <script src="server/collectors/combat-events.lua" type="server" />
+    <script src="server/main.lua" type="server" />
+    
+    <!-- Client Scripts -->
+    <script src="client/main.lua" type="client" />
+    <script src="client/events/player.lua" type="client" />
+    
+    <min_mta_version server="1.5.9" client="1.5.9" />
+</meta>
