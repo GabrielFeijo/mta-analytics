@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
 import Players from './pages/Players';
 import Economy from './pages/Economy';
+import Resources from './pages/Resources';
 import Layout from './components/layout/Layout';
 
 function App() {
@@ -19,6 +20,7 @@ function App() {
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/players" element={<Players />} />
                 <Route path="/economy" element={<Economy />} />
+                <Route path="/resources" element={<Resources />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
         </Layout>
