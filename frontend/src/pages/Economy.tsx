@@ -1,7 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
-import { TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+import { TrendingUp, DollarSign } from 'lucide-react';
 import { economyApi } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { TransactionTable } from "@/components/economy/TransactionTable";
 
 export default function Economy() {
     const { data: snapshot, isLoading } = useQuery({
@@ -10,92 +12,82 @@ export default function Economy() {
         refetchInterval: 30000,
     });
 
-    const { data: transactions } = useQuery({
+    const { data: transactions, isLoading: isTxLoading } = useQuery({
         queryKey: ['recent-transactions'],
-        queryFn: () => economyApi.getTimeSeries('totalMoney', '24h'),
+        // Using the new endpoint we just added
+        queryFn: () => economyApi.getRecentTransactions(20),
+        refetchInterval: 10000,
     });
 
+    if (isLoading) {
+        return <div className="p-8">Loading economy stats...</div>
+    }
+
     return (
-        <div className="p-6 space-y-6">
-            <div>
-                <h1 className="text-3xl font-bold">Economy</h1>
-                <p className="text-muted-foreground">
-                    Monitor server economy and transactions
-                </p>
+        <div className="flex-1 space-y-4 p-8 pt-6">
+            <div className="flex items-center justify-between space-y-2">
+                <h2 className="text-3xl font-bold tracking-tight">Economy</h2>
+                <div className="flex items-center space-x-2">
+
+                </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <MetricCard
-                    title="Total Money"
-                    value={formatCurrency(snapshot?.totalMoney || 0)}
-                    icon={DollarSign}
-                    trend={snapshot?.inflationRate}
-                />
-                <MetricCard
-                    title="Money in Circulation"
-                    value={formatCurrency(snapshot?.moneyInCirc || 0)}
-                    icon={TrendingUp}
-                />
-                <MetricCard
-                    title="Avg Player Wealth"
-                    value={formatCurrency(snapshot?.avgPlayerWealth || 0)}
-                    icon={DollarSign}
-                />
+            <div className="grid gap-4 md:grid-cols-3">
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">
+                            Total Money
+                        </CardTitle>
+                        <DollarSign className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{formatCurrency(snapshot?.totalMoney || 0)}</div>
+                        <p className={`text-xs ${snapshot?.inflationRate >= 0 ? "text-red-500" : "text-green-500"}`}>
+                            Inflation: {snapshot?.inflationRate}%
+                        </p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">
+                            Money in Circulation
+                        </CardTitle>
+                        <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{formatCurrency(snapshot?.moneyInCirc || 0)}</div>
+                        <p className="text-xs text-muted-foreground">
+                            Liquid cash usually
+                        </p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">
+                            Avg Player Wealth
+                        </CardTitle>
+                        <DollarSign className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{formatCurrency(snapshot?.avgPlayerWealth || 0)}</div>
+                        <p className="text-xs text-muted-foreground">
+                            Per active player
+                        </p>
+                    </CardContent>
+                </Card>
             </div>
 
-            <div className="bg-card border border-border rounded-lg p-6">
-                <h2 className="text-xl font-bold mb-4">Recent Transactions</h2>
-                {isLoading ? (
-                    <p className="text-center text-muted-foreground py-8">Loading...</p>
-                ) : (
-                    <div className="space-y-2">
-                        {transactions?.slice(0, 10).map((tx: any, i: number) => (
-                            <div key={i} className="flex items-center justify-between p-3 bg-background rounded-lg">
-                                <div className="flex items-center gap-3">
-                                    {tx.value > 0 ? (
-                                        <TrendingUp className="w-5 h-5 text-green-500" />
-                                    ) : (
-                                        <TrendingDown className="w-5 h-5 text-red-500" />
-                                    )}
-                                    <div>
-                                        <p className="font-medium">
-                                            {formatCurrency(Math.abs(tx.value))}
-                                        </p>
-                                        <p className="text-sm text-muted-foreground">
-                                            {new Date(tx.timestamp).toLocaleString()}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
-        </div>
-    );
-}
-
-interface MetricCardProps {
-    title: string;
-    value: string;
-    icon: any;
-    trend?: number;
-}
-
-function MetricCard({ title, value, icon: Icon, trend }: MetricCardProps) {
-    return (
-        <div className="bg-card border border-border rounded-lg p-6">
-            <div className="flex items-center justify-between mb-4">
-                <span className="text-sm text-muted-foreground">{title}</span>
-                <Icon className="w-5 h-5 text-primary" />
-            </div>
-            <div className="space-y-1">
-                <p className="text-2xl font-bold">{value}</p>
-                {trend !== undefined && (
-                    <p className={`text-sm ${trend >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                        {trend >= 0 ? '+' : ''}{trend.toFixed(2)}% inflation
-                    </p>
-                )}
+            <div className="grid gap-4 md:grid-cols-1">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Recent Transactions</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        {isTxLoading ? <div>Loading transactions...</div> :
+                            <TransactionTable transactions={transactions || []} />
+                        }
+                    </CardContent>
+                </Card>
             </div>
         </div>
     );

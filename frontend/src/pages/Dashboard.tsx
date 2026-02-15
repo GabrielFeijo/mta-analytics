@@ -5,6 +5,10 @@ import { analyticsApi } from '@/lib/api';
 import { useAnalyticsSocket } from '@/hooks/useAnalyticsSocket';
 import { useDashboardStore } from '@/stores/dashboardStore';
 import { formatNumber, formatCurrency } from '@/lib/utils';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Overview } from "@/components/dashboard/Overview";
+import { RecentActivity } from "@/components/dashboard/RecentActivity";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function Dashboard() {
     const { socket, isConnected, subscribe } = useAnalyticsSocket();
@@ -58,101 +62,109 @@ export default function Dashboard() {
     }
 
     return (
-        <div className="p-6 space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold">Analytics Dashboard</h1>
-                    <p className="text-muted-foreground">
-                        Real-time server monitoring and insights
-                    </p>
-                </div>
-
-                <div className="flex items-center gap-2">
-                    <div
-                        className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'
-                            }`}
-                    />
-                    <span className="text-sm">
-                        {isConnected ? 'Live' : 'Disconnected'}
-                    </span>
+        <div className="flex-1 space-y-4 p-8 pt-6">
+            <div className="flex items-center justify-between space-y-2">
+                <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+                <div className="flex items-center space-x-2">
+                    <div className={`flex items-center gap-2 px-3 py-1 rounded-full border ${isConnected ? 'bg-green-500/10 border-green-500/20 text-green-500' : 'bg-red-500/10 border-red-500/20 text-red-500'}`}>
+                        <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+                        <span className="text-sm font-medium">{isConnected ? 'Live' : 'disconnected'}</span>
+                    </div>
                 </div>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatsCard
-                    title="Total Players"
-                    value={formatNumber(stats?.totalPlayers || 0)}
-                    icon={Users}
-                    trend={+5.2}
-                />
-                <StatsCard
-                    title="Online Now"
-                    value={formatNumber(stats?.onlinePlayers || 0)}
-                    icon={Activity}
-                    trend={+12.3}
-                    highlight
-                />
-                <StatsCard
-                    title="Money in Circulation"
-                    value={formatCurrency(stats?.economicSnapshot?.moneyInCirc || 0)}
-                    icon={DollarSign}
-                    trend={-2.1}
-                />
-                <StatsCard
-                    title="Risk Alerts"
-                    value="15"
-                    icon={AlertTriangle}
-                    trend={+8.5}
-                    variant="destructive"
-                />
-            </div>
-
-            <div className="bg-card border border-border rounded-lg p-6">
-                <h2 className="text-xl font-bold mb-4">Recent Events</h2>
-                <div className="space-y-2">
-                    {stats?.recentEvents?.slice(0, 10).map((event: any, i: number) => (
-                        <div key={i} className="flex items-center justify-between p-3 bg-background rounded-lg">
-                            <div>
-                                <p className="font-medium">{event.eventType}</p>
-                                <p className="text-sm text-muted-foreground">
-                                    {event.player?.lastUsername || 'Unknown'}
+            <Tabs defaultValue="overview" className="space-y-4">
+                <TabsList>
+                    <TabsTrigger value="overview">Overview</TabsTrigger>
+                    <TabsTrigger value="analytics" disabled>
+                        Analytics
+                    </TabsTrigger>
+                    <TabsTrigger value="reports" disabled>
+                        Reports
+                    </TabsTrigger>
+                    <TabsTrigger value="notifications" disabled>
+                        Notifications
+                    </TabsTrigger>
+                </TabsList>
+                <TabsContent value="overview" className="space-y-4">
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">
+                                    Total Players
+                                </CardTitle>
+                                <Users className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">{formatNumber(stats?.totalPlayers || 0)}</div>
+                                <p className="text-xs text-muted-foreground">
+                                    +5.2% from last month
                                 </p>
-                            </div>
-                            <span className="text-xs text-muted-foreground">
-                                {new Date(event.timestamp).toLocaleTimeString()}
-                            </span>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        </div>
-    );
-}
-
-interface StatsCardProps {
-    title: string;
-    value: string;
-    icon: any;
-    trend?: number;
-    highlight?: boolean;
-    variant?: 'default' | 'destructive';
-}
-
-function StatsCard({ title, value, icon: Icon, trend, highlight, variant = 'default' }: StatsCardProps) {
-    return (
-        <div className={`bg-card border rounded-lg p-6 ${highlight ? 'border-primary' : 'border-border'}`}>
-            <div className="flex items-center justify-between mb-4">
-                <span className="text-sm text-muted-foreground">{title}</span>
-                <Icon className={`w-5 h-5 ${variant === 'destructive' ? 'text-destructive' : 'text-primary'}`} />
-            </div>
-            <div className="space-y-1">
-                <p className="text-2xl font-bold">{value}</p>
-                {trend !== undefined && (
-                    <p className={`text-sm ${trend >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                        {trend >= 0 ? '+' : ''}{trend}% from last week
-                    </p>
-                )}
-            </div>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">
+                                    Online Now
+                                </CardTitle>
+                                <Activity className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">{formatNumber(stats?.onlinePlayers || 0)}</div>
+                                <p className="text-xs text-muted-foreground">
+                                    +12 since last hour
+                                </p>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">Money in Circulation</CardTitle>
+                                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">{formatCurrency(stats?.economicSnapshot?.moneyInCirc || 0)}</div>
+                                <p className="text-xs text-muted-foreground">
+                                    +19% from last month
+                                </p>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">
+                                    Risk Alerts
+                                </CardTitle>
+                                <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">15</div>
+                                <p className="text-xs text-muted-foreground">
+                                    +2 since last hour
+                                </p>
+                            </CardContent>
+                        </Card>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+                        <Card className="col-span-4">
+                            <CardHeader>
+                                <CardTitle>Overview</CardTitle>
+                            </CardHeader>
+                            <CardContent className="pl-2">
+                                <Overview />
+                            </CardContent>
+                        </Card>
+                        <Card className="col-span-3">
+                            <CardHeader>
+                                <CardTitle>Recent Activity</CardTitle>
+                                <CardDescription>
+                                    Live events from the server.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <RecentActivity events={stats?.recentEvents || []} />
+                            </CardContent>
+                        </Card>
+                    </div>
+                </TabsContent>
+            </Tabs>
         </div>
     );
 }

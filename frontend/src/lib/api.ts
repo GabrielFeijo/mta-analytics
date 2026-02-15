@@ -109,6 +109,20 @@ export const economyApi = {
         });
         return response.data;
     },
+
+    getRecentTransactions: async (limit: number = 50) => {
+        const response = await apiClient.get('/economy/transactions/recent', {
+            params: { limit },
+        });
+        return response.data;
+    },
+
+    getPlayerTransactions: async (playerId: number, limit: number = 50) => {
+        const response = await apiClient.get(`/economy/transactions/player/${playerId}`, {
+            params: { limit },
+        });
+        return response.data;
+    },
 };
 
 export default apiClient;
