@@ -1,13 +1,32 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bull';
 import { PrismaService } from '../database/prisma.service';
 import { RedisService } from '../database/redis.service';
 
 @Injectable()
-export class AnalyticsService {
+export class AnalyticsService implements OnModuleInit {
 	constructor(
 		private prisma: PrismaService,
 		private redis: RedisService,
-	) {}
+		@InjectQueue('metrics') private metricsQueue: Queue,
+	) { }
+
+	async onModuleInit() {
+		// Schedule metrics refresh every hour
+		try {
+			await this.metricsQueue.add(
+				'refresh-metrics',
+				{},
+				{
+					repeat: { cron: '0 * * * *' },
+					jobId: 'refresh-metrics-job',
+				},
+			);
+		} catch (error) {
+			console.error('Failed to schedule metrics job:', error);
+		}
+	}
 
 	async getInitialDashboardData() {
 		const [
@@ -55,22 +74,23 @@ export class AnalyticsService {
 		const transactions = await this.prisma.transaction.findMany({
 			where: {
 				timestamp: { gte: sevenDaysAgo },
-				type: 'SPEND',
+				type: { in: ['SPEND', 'EARN'] },
 			},
 			select: {
 				amount: true,
 				timestamp: true,
+				type: true,
 			},
 		});
 
-		const dailyStats = new Map<string, number>();
+		const dailyStats = new Map<string, { earn: number; spend: number }>();
 		for (let i = 0; i < 7; i++) {
 			const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
 			const key = date.toLocaleDateString('en-US', {
 				month: 'short',
 				day: 'numeric',
 			});
-			dailyStats.set(key, 0);
+			dailyStats.set(key, { earn: 0, spend: 0 });
 		}
 
 		transactions.forEach((tx) => {
@@ -79,15 +99,23 @@ export class AnalyticsService {
 				day: 'numeric',
 			});
 			if (dailyStats.has(key)) {
-				dailyStats.set(key, dailyStats.get(key)! + tx.amount);
+				const current = dailyStats.get(key)!;
+				if (tx.type === 'EARN') {
+					current.earn += tx.amount;
+				} else {
+					current.spend += tx.amount;
+				}
+				dailyStats.set(key, current);
 			}
 		});
 
 		return Array.from(dailyStats.entries())
 			.reverse()
-			.map(([name, total]) => ({
+			.map(([name, stats]) => ({
 				name,
-				total,
+				earn: stats.earn,
+				spend: stats.spend,
+				total: stats.earn - stats.spend, // Net flow
 			}));
 	}
 
@@ -155,12 +183,8 @@ export class AnalyticsService {
 		});
 
 		if (!latest) {
-			return {
-				totalMoney: 0,
-				moneyInCirc: 0,
-				avgPlayerWealth: 0,
-				inflationRate: 0,
-			};
+			// Trigger immediate generation if none exists
+			return this.generateEconomicMetrics();
 		}
 
 		return {
@@ -169,6 +193,52 @@ export class AnalyticsService {
 			avgPlayerWealth: latest.avgPlayerWealth,
 			inflationRate: latest.inflationRate || 0,
 		};
+	}
+
+	async generateEconomicMetrics() {
+		const [totalPlayers, transactions, lastMetric] = await Promise.all([
+			this.prisma.player.count(),
+			this.prisma.transaction.findMany({
+				select: {
+					amount: true,
+					type: true,
+				},
+			}),
+			this.prisma.economicMetric.findFirst({
+				orderBy: { timestamp: 'desc' },
+			}),
+		]);
+
+		let moneyInCirc = 0;
+		transactions.forEach((tx) => {
+			if (tx.type === 'EARN' || tx.type === 'TRANSFER_IN') {
+				moneyInCirc += tx.amount;
+			} else if (tx.type === 'SPEND' || tx.type === 'TRANSFER_OUT') {
+				moneyInCirc -= tx.amount;
+			}
+		});
+
+		// Ensure we don't have negative money in circulation due to missing history
+		moneyInCirc = Math.max(0, moneyInCirc);
+
+		const totalMoney = moneyInCirc; // For now they are the same as we only track char:money
+		const avgPlayerWealth = totalPlayers > 0 ? totalMoney / totalPlayers : 0;
+
+		let inflationRate = 0;
+		if (lastMetric && lastMetric.moneyInCirc > 0) {
+			inflationRate =
+				((moneyInCirc - lastMetric.moneyInCirc) / lastMetric.moneyInCirc) * 100;
+		}
+
+		return await this.prisma.economicMetric.create({
+			data: {
+				totalMoney,
+				moneyInCirc,
+				avgPlayerWealth,
+				inflationRate,
+				timestamp: new Date(),
+			},
+		});
 	}
 
 	async getHeatmapData(filters: {

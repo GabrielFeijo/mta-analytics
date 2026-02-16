@@ -5,7 +5,7 @@ import { PlayerEventZod } from '../../mta/dto/player-event.dto';
 
 @Processor('events')
 export class EventProcessor {
-	constructor(private prisma: PrismaService) {}
+	constructor(private prisma: PrismaService) { }
 
 	@Process('process-event')
 	async handleEvent(job: Job<PlayerEventZod>) {
@@ -112,11 +112,19 @@ export class EventProcessor {
 				string,
 				'EARN' | 'SPEND' | 'TRANSFER_IN' | 'TRANSFER_OUT'
 			> = {
-				deposit: 'SPEND',
-				withdraw: 'EARN',
+				deposit: 'TRANSFER_OUT',
+				withdraw: 'TRANSFER_IN',
+				business_deposit: 'TRANSFER_OUT',
+				business_withdraw: 'TRANSFER_IN',
 				transfer_sent: 'TRANSFER_OUT',
 				transfer_received: 'TRANSFER_IN',
 				shop_purchase: 'SPEND',
+				gas_purchase: 'SPEND',
+				repair_cost: 'SPEND',
+				traffic_fine: 'SPEND',
+				ammo_purchase: 'SPEND',
+				job_payout: 'EARN',
+				illegal_income: 'EARN',
 			};
 
 			const type = transTypeMap[event.data.type] || 'SPEND';
@@ -126,7 +134,7 @@ export class EventProcessor {
 					playerId,
 					type,
 					amount: Math.abs(event.data.amount),
-					balance: 0, 
+					balance: 0,
 					source: event.data.source_resource || 'bank',
 					metadata: event.data,
 				},
