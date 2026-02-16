@@ -23,3 +23,4 @@ Config.COLLECT_EVENTS = {
 }
 
 Config.DEBUG = true
+Config.MAX_API_FAILURES = 5

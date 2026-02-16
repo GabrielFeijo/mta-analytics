@@ -1,5 +1,26 @@
 Request = {}
 
+local consecutiveFailures = 0
+
+local function handleApiResponse(success, callName)
+    if success then
+        if consecutiveFailures > 0 then
+            if Config.DEBUG then
+                outputDebugString("[Analytics] API connection restored. Resetting failure counter.")
+            end
+            consecutiveFailures = 0
+        end
+    else
+        consecutiveFailures = consecutiveFailures + 1
+        outputDebugString("[Analytics] API Call Failed (" .. callName .. "). Consecutive failures: " .. consecutiveFailures .. "/" .. Config.MAX_API_FAILURES)
+        
+        if consecutiveFailures >= Config.MAX_API_FAILURES then
+            outputDebugString("[Analytics] ERROR: Reached maximum consecutive failures (" .. Config.MAX_API_FAILURES .. "). Stopping resource to prevent network spam.")
+            stopResource(getThisResource())
+        end
+    end
+end
+
 function Request.sendEvent(event)
     local timestamp = getRealTime().timestamp * 1000
     local body = toJSON(event, true)
@@ -17,6 +38,7 @@ function Request.sendEvent(event)
     }
     
     fetchRemote(Config.API_URL .. "/event", options, function(responseData, responseInfo )
+        handleApiResponse(responseInfo.success, "sendEvent")
         if responseInfo.success then
             if Config.DEBUG then
                 outputDebugString("[Analytics] Event sent successfully")
@@ -44,6 +66,7 @@ function Request.sendBatch(events)
     }
 
     fetchRemote(Config.API_URL .. "/events/batch", options, function(responseData, responseInfo )
+        handleApiResponse(responseInfo.success, "sendBatch")
         if responseInfo.success then
             if Config.DEBUG then
                 outputDebugString("[Analytics] Batch sent successfully (" .. #events .. " events)")
@@ -78,6 +101,7 @@ function Request.sendHeartbeat()
 
 
     fetchRemote(Config.API_URL .. "/heartbeat", options, function(responseData, responseInfo )
+        handleApiResponse(responseInfo.success, "sendHeartbeat")
         if responseInfo.success then
             if Config.DEBUG then
                 outputDebugString("[Analytics] Heartbeat sent")
