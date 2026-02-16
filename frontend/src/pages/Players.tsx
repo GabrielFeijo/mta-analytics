@@ -5,6 +5,7 @@ import { playersApi } from '@/lib/api';
 import { Input } from "@/components/ui/input"
 import { PlayerTable } from "@/components/players/PlayerTable"
 import { PlayerDetailsDialog } from "@/components/players/PlayerDetailsDialog"
+import { Player } from '@/lib/types';
 
 export default function Players() {
     const [searchQuery, setSearchQuery] = useState('');
@@ -25,7 +26,7 @@ export default function Players() {
 
     const displayPlayers = searchQuery.length > 2 ? searchResults : onlinePlayers;
 
-    const handleViewPlayer = (player: any) => {
+    const handleViewPlayer = (player: Player) => {
         setSelectedPlayerId(player.id);
         setDetailsOpen(true);
     };

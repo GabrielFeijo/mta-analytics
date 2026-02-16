@@ -9,15 +9,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Eye } from "lucide-react"
-
-interface Player {
-    id: number
-    lastUsername: string
-    serial: string
-    lastSeen: string
-    riskScore: number
-    totalPlaytime: number
-}
+import { Player } from "@/lib/types"
 
 interface PlayerTableProps {
     players: Player[]
@@ -35,6 +27,8 @@ export function PlayerTable({ players, onViewPlayer }: PlayerTableProps) {
                 <TableHeader>
                     <TableRow>
                         <TableHead>Usuário</TableHead>
+                        <TableHead>Nível</TableHead>
+                        <TableHead>Emprego</TableHead>
                         <TableHead>Serial</TableHead>
                         <TableHead>Visto por último</TableHead>
                         <TableHead>Risco</TableHead>
@@ -45,7 +39,11 @@ export function PlayerTable({ players, onViewPlayer }: PlayerTableProps) {
                 <TableBody>
                     {players.map((player) => (
                         <TableRow key={player.id}>
-                            <TableCell className="font-medium">{player.lastUsername || "Desconhecido"}</TableCell>
+                            <TableCell className="font-medium max-w-[150px] truncate" title={player.lastUsername || "Desconhecido"}>
+                                {player.lastUsername || "Desconhecido"}
+                            </TableCell>
+                            <TableCell>{player.level || 1}</TableCell>
+                            <TableCell className="max-w-[120px] truncate" title={player.job || "Desempregado"}>{player.job || "Desempregado"}</TableCell>
                             <TableCell>
                                 <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-xs font-semibold">
                                     {player.serial.substring(0, 12)}...

@@ -50,7 +50,9 @@ export function TransactionTable({ transactions }: { transactions: Transaction[]
             <TableBody>
                 {transactions.map((tx) => (
                     <TableRow key={tx.id || Math.random()}>
-                        <TableCell className="font-medium">{tx.player?.lastUsername || "Desconhecido"}</TableCell>
+                        <TableCell className="font-medium max-w-[150px] truncate" title={tx.player?.lastUsername || "Desconhecido"}>
+                            {tx.player?.lastUsername || "Desconhecido"}
+                        </TableCell>
                         <TableCell>
                             <div className="flex items-center gap-2">
                                 {tx.type === 'EARN' || tx.type === 'TRANSFER_IN' ? (
@@ -61,7 +63,7 @@ export function TransactionTable({ transactions }: { transactions: Transaction[]
                                 <span>{getTranslation(tx.type)}</span>
                             </div>
                         </TableCell>
-                        <TableCell>{tx.source}</TableCell>
+                        <TableCell className="max-w-[150px] truncate" title={tx.source}>{tx.source}</TableCell>
                         <TableCell className={`text-right ${tx.type === 'EARN' || tx.type === 'TRANSFER_IN' ? "text-green-500" : "text-red-500"}`}>
                             {formatCurrency(tx.amount)}
                         </TableCell>

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { Player, Transaction } from './types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
@@ -96,21 +97,28 @@ export const analyticsApi = {
     getOverviewStats: async () => {
         const response = await apiClient.get('/analytics/overview');
         return response.data;
+    },
+
+    getFinesStats: async (hours: number = 24) => {
+        const response = await apiClient.get('/analytics/fines', {
+            params: { hours },
+        });
+        return response.data;
     }
 };
 
 export const playersApi = {
-    getOnlinePlayers: async () => {
+    getOnlinePlayers: async (): Promise<Player[]> => {
         const response = await apiClient.get('/players/online');
         return response.data;
     },
 
-    getPlayer: async (id: number) => {
+    getPlayer: async (id: number): Promise<Player> => {
         const response = await apiClient.get(`/players/${id}`);
         return response.data;
     },
 
-    searchPlayers: async (query: string) => {
+    searchPlayers: async (query: string): Promise<Player[]> => {
         const response = await apiClient.get('/players/search', {
             params: { q: query },
         });
@@ -131,14 +139,14 @@ export const economyApi = {
         return response.data;
     },
 
-    getRecentTransactions: async (limit: number = 50) => {
+    getRecentTransactions: async (limit: number = 50): Promise<Transaction[]> => {
         const response = await apiClient.get('/economy/transactions/recent', {
             params: { limit },
         });
         return response.data;
     },
 
-    getPlayerTransactions: async (playerId: number, limit: number = 50) => {
+    getPlayerTransactions: async (playerId: number, limit: number = 50): Promise<Transaction[]> => {
         const response = await apiClient.get(`/economy/transactions/player/${playerId}`, {
             params: { limit },
         });

@@ -31,9 +31,9 @@ export function RecentActivity({ events }: { events: any[] }) {
                         <AvatarImage src={`https://avatar.vercel.sh/${event.player?.lastUsername || 'unknown'}.png`} alt="Avatar" />
                         <AvatarFallback>{event.player?.lastUsername?.[0]?.toUpperCase() || '?'}</AvatarFallback>
                     </Avatar>
-                    <div className="ml-4 space-y-1">
-                        <p className="text-sm font-medium leading-none">{getEventTranslation(event.eventType)}</p>
-                        <p className="text-sm text-muted-foreground">
+                    <div className="ml-4 space-y-1 min-w-0 flex-1">
+                        <p className="text-sm font-medium leading-none truncate">{getEventTranslation(event.eventType)}</p>
+                        <p className="text-sm text-muted-foreground truncate" title={event.player?.lastUsername}>
                             {event.player?.lastUsername || 'Jogador Desconhecido'}
                         </p>
                     </div>
