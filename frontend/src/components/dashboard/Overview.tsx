@@ -22,10 +22,16 @@ export function Overview({ data }: { data: any[] }) {
                     tickFormatter={(value) => `$${value}`}
                 />
                 <Bar
-                    dataKey="total"
-                    fill="currentColor"
+                    dataKey="earn"
+                    fill="#22c55e"
                     radius={[4, 4, 0, 0]}
-                    className="fill-primary"
+                    name="Income"
+                />
+                <Bar
+                    dataKey="spend"
+                    fill="#ef4444"
+                    radius={[4, 4, 0, 0]}
+                    name="Expense"
                 />
             </BarChart>
         </ResponsiveContainer>
