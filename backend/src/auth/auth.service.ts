@@ -10,9 +10,9 @@ export class AuthService {
         private jwtService: JwtService,
     ) { }
 
-    async login(username: string, password: string) {
+    async login(email: string, password: string) {
         const admin = await this.prisma.admin.findUnique({
-            where: { username },
+            where: { email },
         });
 
         if (!admin) {
