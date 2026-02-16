@@ -50,6 +50,18 @@ model Player {
   riskScore     Float    @default(0.0)
   metadata      Json?
 
+  money         Float    @default(0)
+  bank          Float    @default(0)
+  level         Int      @default(1)
+  experience    Int      @default(0)
+  job           String?
+  playedTime    Int      @default(0)
+  characterId   Int?
+  thirst        Float    @default(100)
+  hunger        Float    @default(100)
+  premiumPoints Float    @default(0)
+  faction       String?
+
   events         Event[]
   sessions       PlayerSession[]
   transactions   Transaction[]
