@@ -21,6 +21,8 @@ export class PlayersService {
                 lastSeen: true,
                 riskScore: true,
                 totalPlaytime: true,
+                level: true,
+                job: true,
             },
             orderBy: {
                 lastSeen: 'desc',
@@ -71,6 +73,8 @@ export class PlayersService {
                 lastUsername: true,
                 lastSeen: true,
                 riskScore: true,
+                level: true,
+                job: true,
             },
         });
     }

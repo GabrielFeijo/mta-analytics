@@ -2,6 +2,22 @@ import { IsString, IsNumber, IsOptional, IsObject, ValidateNested } from 'class-
 import { Type } from 'class-transformer';
 import { z } from 'zod';
 
+export interface PlayerMetrics {
+    money?: number;
+    bank?: number;
+    level?: number;
+    experience?: number;
+    job?: string;
+    playedTime?: number;
+    characterId?: number;
+    thirst?: number;
+    hunger?: number;
+    premiumPoints?: number;
+    faction?: string;
+    // Add other possible fields that might come in 'data'
+    [key: string]: any;
+}
+
 export const PlayerEventSchema = z.object({
     eventType: z.string(),
     playerId: z.number().optional(),

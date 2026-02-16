@@ -381,4 +381,73 @@ export class AnalyticsService implements OnModuleInit {
 			},
 		};
 	}
+
+	async getFinesStats(hours: number = 24) {
+		const startDate = new Date(Date.now() - hours * 60 * 60 * 1000);
+
+		const [fines, topFinedPlayers] = await Promise.all([
+			this.prisma.event.findMany({
+				where: {
+					eventType: 'fine_issued',
+					timestamp: { gte: startDate },
+				},
+				include: {
+					player: {
+						select: {
+							lastUsername: true,
+							serial: true,
+						},
+					},
+				},
+				orderBy: { timestamp: 'desc' },
+			}),
+			this.prisma.transaction.groupBy({
+				by: ['playerId'],
+				where: {
+					source: 'traffic_fine',
+					timestamp: { gte: startDate },
+				},
+				_sum: { amount: true },
+				_count: { id: true },
+				orderBy: { _sum: { amount: 'desc' } },
+				take: 10,
+			}),
+		]);
+
+		const playerIds = topFinedPlayers.map((p) => p.playerId);
+		const players = await this.prisma.player.findMany({
+			where: { id: { in: playerIds } },
+			select: { id: true, lastUsername: true },
+		});
+
+		const topPlayersFormatted = topFinedPlayers.map((tp) => {
+			const player = players.find((p) => p.id === tp.playerId);
+			return {
+				username: player?.lastUsername || 'Unknown',
+				totalAmount: tp._sum.amount,
+				count: tp._count.id,
+			};
+		});
+
+		const totalAmount = fines.reduce(
+			(acc, fine) => acc + ((fine.data as any)?.amount || 0),
+			0,
+		);
+
+		return {
+			recentFines: fines.map((f) => ({
+				id: f.id,
+				player: f.player.lastUsername,
+				amount: (f.data as any)?.amount,
+				reason: (f.data as any)?.reason,
+				plate: (f.data as any)?.plate,
+				timestamp: f.timestamp,
+			})),
+			topPlayers: topPlayersFormatted,
+			summary: {
+				totalFines: fines.length,
+				totalAmount,
+			},
+		};
+	}
 }

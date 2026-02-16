@@ -5,7 +5,7 @@ import { AnalyticsService } from './analytics.service';
 @Controller('analytics')
 @UseGuards(JwtAuthGuard)
 export class AnalyticsController {
-	constructor(private analyticsService: AnalyticsService) {}
+	constructor(private analyticsService: AnalyticsService) { }
 
 	@Get('dashboard')
 	async getDashboardStats() {
@@ -52,5 +52,11 @@ export class AnalyticsController {
 	async getResourceStats(@Query('hours') hours?: string) {
 		const hoursNum = hours ? parseInt(hours) : 24;
 		return this.analyticsService.getResourceStats(hoursNum);
+	}
+
+	@Get('fines')
+	async getFinesStats(@Query('hours') hours?: string) {
+		const hoursNum = hours ? parseInt(hours) : 24;
+		return this.analyticsService.getFinesStats(hoursNum);
 	}
 }
