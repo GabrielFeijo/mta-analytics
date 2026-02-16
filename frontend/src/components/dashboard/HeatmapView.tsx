@@ -73,12 +73,12 @@ export function HeatmapView() {
 	return (
 		<Card>
 			<CardHeader>
-				<CardTitle>Player Density Heatmap</CardTitle>
+				<CardTitle>Mapa de Calor de Densidade de Jogadores</CardTitle>
 			</CardHeader>
 			<CardContent className='flex justify-center'>
 				{isLoading ? (
 					<div className='h-[500px] flex items-center justify-center'>
-						Loading heatmap...
+						Carregando mapa de calor...
 					</div>
 				) : (
 					<div
@@ -92,7 +92,7 @@ export function HeatmapView() {
 							className='absolute inset-0'
 						/>
 						<div className='absolute bottom-2 right-2 text-xs text-muted-foreground bg-black/50 p-1 rounded'>
-							MTA World Coordinate Map (-3000 to 3000)
+							Mapa de Coordenadas do Mundo MTA (-3000 a 3000)
 						</div>
 					</div>
 				)}

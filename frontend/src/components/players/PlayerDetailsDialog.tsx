@@ -28,14 +28,14 @@ export function PlayerDetailsDialog({ playerId, open, onOpenChange }: PlayerDeta
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
-                    <DialogTitle>Player Details</DialogTitle>
+                    <DialogTitle>Detalhes do Jogador</DialogTitle>
                     <DialogDescription>
-                        Detailed information and statistics.
+                        Informações detalhadas e estatísticas.
                     </DialogDescription>
                 </DialogHeader>
 
                 {isLoading ? (
-                    <div className="py-8 text-center">Loading player data...</div>
+                    <div className="py-8 text-center">Carregando dados do jogador...</div>
                 ) : player ? (
                     <div className="grid gap-4 py-4">
                         <div className="flex items-center gap-4">
@@ -52,40 +52,40 @@ export function PlayerDetailsDialog({ playerId, open, onOpenChange }: PlayerDeta
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1">
-                                <p className="text-sm font-medium text-muted-foreground">Total Playtime</p>
+                                <p className="text-sm font-medium text-muted-foreground">Tempo Total</p>
                                 <p className="font-bold">{Math.floor((player.totalPlaytime || 0) / 60)}h</p>
                             </div>
                             <div className="space-y-1">
-                                <p className="text-sm font-medium text-muted-foreground">Risk Score</p>
+                                <p className="text-sm font-medium text-muted-foreground">Score de Risco</p>
                                 <Badge variant={player.riskScore > 0.7 ? "destructive" : "secondary"}>
                                     {(player.riskScore * 100).toFixed(0)}%
                                 </Badge>
                             </div>
                             <div className="space-y-1">
-                                <p className="text-sm font-medium text-muted-foreground">Last Seen</p>
+                                <p className="text-sm font-medium text-muted-foreground">Visto por último</p>
                                 <p className="text-sm">{new Date(player.lastSeen).toLocaleString()}</p>
                             </div>
                             <div className="space-y-1">
-                                <p className="text-sm font-medium text-muted-foreground">IP Address</p>
-                                <p className="text-sm font-mono">{player.ip || 'Hidden'}</p>
+                                <p className="text-sm font-medium text-muted-foreground">Endereço IP</p>
+                                <p className="text-sm font-mono">{player.ip || 'Oculto'}</p>
                             </div>
                         </div>
 
                         <Separator />
 
                         <div>
-                            <h4 className="font-semibold mb-2">Recent Activity</h4>
+                            <h4 className="font-semibold mb-2">Atividade Recente</h4>
                             <ScrollArea className="h-[150px] w-full rounded-md border p-4">
                                 {/* Placeholder for activity log - API endpoint might be needed */}
                                 <div className="text-sm text-muted-foreground">
-                                    No recent activity recorded in this session.
+                                    Nenhuma atividade recente registrada nesta sessão.
                                 </div>
                             </ScrollArea>
                         </div>
 
                     </div>
                 ) : (
-                    <div className="py-8 text-center text-muted-foreground">Player not found</div>
+                    <div className="py-8 text-center text-muted-foreground">Jogador não encontrado</div>
                 )}
             </DialogContent>
         </Dialog>

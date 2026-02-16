@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { ShoppingCart, Car, DollarSign } from 'lucide-react';
+import { ShoppingCart, Car } from 'lucide-react';
 import { analyticsApi } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TransactionTable } from "@/components/economy/TransactionTable";
@@ -28,9 +28,9 @@ export default function Resources() {
         <div className="flex-1 space-y-4 p-8 pt-6">
             <div className="flex items-center justify-between space-y-2">
                 <div>
-                    <h2 className="text-3xl font-bold tracking-tight">Resources & Shops</h2>
+                    <h2 className="text-3xl font-bold tracking-tight">Recursos e Lojas</h2>
                     <p className="text-muted-foreground">
-                        Monitor asset purchases and shop activity (Last 24h)
+                        Monitore compras de ativos e atividades de lojas (Últimas 24h)
                     </p>
                 </div>
             </div>
@@ -39,28 +39,28 @@ export default function Resources() {
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">
-                            Vehicle Sales
+                            Vendas de Veículos
                         </CardTitle>
                         <Car className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{stats.vehicleCount}</div>
                         <p className="text-xs text-muted-foreground">
-                            Revenue: ${stats.vehicleRevenue.toLocaleString()}
+                            Receita: ${stats.vehicleRevenue.toLocaleString()}
                         </p>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">
-                            Shop Sales
+                            Vendas de Lojas
                         </CardTitle>
                         <ShoppingCart className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{stats.shopCount}</div>
                         <p className="text-xs text-muted-foreground">
-                            Revenue: ${stats.shopRevenue.toLocaleString()}
+                            Receita: ${stats.shopRevenue.toLocaleString()}
                         </p>
                     </CardContent>
                 </Card>
@@ -68,21 +68,21 @@ export default function Resources() {
 
             <Tabs defaultValue="vehicles" className="space-y-4">
                 <TabsList>
-                    <TabsTrigger value="vehicles">Vehicle Sales</TabsTrigger>
-                    <TabsTrigger value="shops">Shop Activity</TabsTrigger>
+                    <TabsTrigger value="vehicles">Vendas de Veículos</TabsTrigger>
+                    <TabsTrigger value="shops">Atividade de Lojas</TabsTrigger>
                 </TabsList>
                 <TabsContent value="vehicles" className="space-y-4">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Recent Vehicle Purchases</CardTitle>
+                            <CardTitle>Compras Recentes de Veículos</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            {isLoading ? <div>Loading...</div> :
+                            {isLoading ? <div>Carregando...</div> :
                                 <TransactionTable transactions={vehiclePurchases.map((tx: any) => ({
                                     id: tx.id,
                                     type: 'SPEND',
                                     amount: tx.amount,
-                                    source: tx.vehicleName || 'Car Shop',
+                                    source: tx.vehicleName || 'Concessionária',
                                     timestamp: tx.timestamp,
                                     player: { lastUsername: tx.player },
                                     newBalance: 0
@@ -94,15 +94,15 @@ export default function Resources() {
                 <TabsContent value="shops" className="space-y-4">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Recent Shop Purchases</CardTitle>
+                            <CardTitle>Compras Recentes de Lojas</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            {isLoading ? <div>Loading...</div> :
+                            {isLoading ? <div>Carregando...</div> :
                                 <TransactionTable transactions={shopPurchases.map((tx: any) => ({
                                     id: tx.id,
                                     type: 'SPEND',
                                     amount: tx.amount,
-                                    source: tx.itemName || 'Shop',
+                                    source: tx.itemName || 'Loja',
                                     timestamp: tx.timestamp,
                                     player: { lastUsername: tx.player },
                                     newBalance: 0

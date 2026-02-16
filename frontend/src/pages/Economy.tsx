@@ -19,20 +19,20 @@ export default function Economy() {
 	});
 
 	if (isLoading) {
-		return <div className='p-8'>Loading economy stats...</div>;
+		return <div className='p-8'>Carregando estatísticas da economia...</div>;
 	}
 
 	return (
 		<div className='flex-1 space-y-4 p-8 pt-6'>
 			<div className='flex items-center justify-between space-y-2'>
-				<h2 className='text-3xl font-bold tracking-tight'>Economy</h2>
+				<h2 className='text-3xl font-bold tracking-tight'>Economia</h2>
 				<div className='flex items-center space-x-2'></div>
 			</div>
 
 			<div className='grid gap-4 md:grid-cols-3'>
 				<Card>
 					<CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-						<CardTitle className='text-sm font-medium'>Total Money</CardTitle>
+						<CardTitle className='text-sm font-medium'>Dinheiro Total</CardTitle>
 						<DollarSign className='h-4 w-4 text-muted-foreground' />
 					</CardHeader>
 					<CardContent>
@@ -42,14 +42,14 @@ export default function Economy() {
 						<p
 							className={`text-xs ${snapshot?.inflationRate >= 0 ? 'text-red-500' : 'text-green-500'}`}
 						>
-							Inflation: {snapshot?.inflationRate}%
+							Inflação: {snapshot?.inflationRate}%
 						</p>
 					</CardContent>
 				</Card>
 				<Card>
 					<CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
 						<CardTitle className='text-sm font-medium'>
-							Money in Circulation
+							Dinheiro em Circulação
 						</CardTitle>
 						<TrendingUp className='h-4 w-4 text-muted-foreground' />
 					</CardHeader>
@@ -57,13 +57,13 @@ export default function Economy() {
 						<div className='text-2xl font-bold'>
 							{formatCurrency(snapshot?.moneyInCirc || 0)}
 						</div>
-						<p className='text-xs text-muted-foreground'>Liquid cash usually</p>
+						<p className='text-xs text-muted-foreground'>Geralmente dinheiro vivo</p>
 					</CardContent>
 				</Card>
 				<Card>
 					<CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
 						<CardTitle className='text-sm font-medium'>
-							Avg Player Wealth
+							Riqueza Média por Jogador
 						</CardTitle>
 						<DollarSign className='h-4 w-4 text-muted-foreground' />
 					</CardHeader>
@@ -71,7 +71,7 @@ export default function Economy() {
 						<div className='text-2xl font-bold'>
 							{formatCurrency(snapshot?.avgPlayerWealth || 0)}
 						</div>
-						<p className='text-xs text-muted-foreground'>Per active player</p>
+						<p className='text-xs text-muted-foreground'>Por jogador ativo</p>
 					</CardContent>
 				</Card>
 			</div>
@@ -79,11 +79,11 @@ export default function Economy() {
 			<div className='grid gap-4 md:grid-cols-1'>
 				<Card>
 					<CardHeader>
-						<CardTitle>Recent Transactions</CardTitle>
+						<CardTitle>Transações Recentes</CardTitle>
 					</CardHeader>
 					<CardContent>
 						{isTxLoading ? (
-							<div>Loading transactions...</div>
+							<div>Carregando transações...</div>
 						) : (
 							<TransactionTable transactions={transactions || []} />
 						)}

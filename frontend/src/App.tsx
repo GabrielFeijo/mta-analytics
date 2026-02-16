@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './stores/authStore';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
+import Register from './pages/Register';
 import Players from './pages/Players';
 import Economy from './pages/Economy';
 import Resources from './pages/Resources';
@@ -11,7 +12,13 @@ function App() {
     const { isAuthenticated } = useAuthStore();
 
     if (!isAuthenticated) {
-        return <Login />;
+        return (
+            <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="*" element={<Navigate to="/login" replace />} />
+            </Routes>
+        );
     }
 
     return (

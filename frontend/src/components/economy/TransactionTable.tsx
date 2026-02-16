@@ -23,24 +23,34 @@ interface Transaction {
 
 export function TransactionTable({ transactions }: { transactions: Transaction[] }) {
     if (!transactions || transactions.length === 0) {
-        return <div className="text-center py-4 text-muted-foreground">No recent transactions</div>
+        return <div className="text-center py-4 text-muted-foreground">Nenhuma transação recente</div>
     }
+
+    const getTranslation = (type: string) => {
+        const types: Record<string, string> = {
+            'EARN': 'Ganho',
+            'SPEND': 'Gasto',
+            'TRANSFER_IN': 'Transf. Recebida',
+            'TRANSFER_OUT': 'Transf. Enviada'
+        };
+        return types[type] || type;
+    };
 
     return (
         <Table>
             <TableHeader>
                 <TableRow>
-                    <TableHead>Player</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Source</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                    <TableHead className="text-right">Time</TableHead>
+                    <TableHead>Jogador</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Fonte</TableHead>
+                    <TableHead className="text-right">Valor</TableHead>
+                    <TableHead className="text-right">Hora</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
                 {transactions.map((tx) => (
                     <TableRow key={tx.id || Math.random()}>
-                        <TableCell className="font-medium">{tx.player?.lastUsername || "Unknown"}</TableCell>
+                        <TableCell className="font-medium">{tx.player?.lastUsername || "Desconhecido"}</TableCell>
                         <TableCell>
                             <div className="flex items-center gap-2">
                                 {tx.type === 'EARN' || tx.type === 'TRANSFER_IN' ? (
@@ -48,7 +58,7 @@ export function TransactionTable({ transactions }: { transactions: Transaction[]
                                 ) : (
                                     <TrendingDown className="h-4 w-4 text-red-500" />
                                 )}
-                                <span>{tx.type}</span>
+                                <span>{getTranslation(tx.type)}</span>
                             </div>
                         </TableCell>
                         <TableCell>{tx.source}</TableCell>

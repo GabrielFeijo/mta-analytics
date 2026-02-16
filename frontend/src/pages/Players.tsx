@@ -34,9 +34,9 @@ export default function Players() {
         <div className="flex-1 space-y-4 p-8 pt-6">
             <div className="flex items-center justify-between space-y-2">
                 <div>
-                    <h2 className="text-3xl font-bold tracking-tight">Players</h2>
+                    <h2 className="text-3xl font-bold tracking-tight">Jogadores</h2>
                     <p className="text-muted-foreground">
-                        Manage and monitor player activity
+                        Gerencie e monitore a atividade dos jogadores
                     </p>
                 </div>
             </div>
@@ -45,7 +45,7 @@ export default function Players() {
                 <Search className="w-5 h-5 text-muted-foreground" />
                 <Input
                     type="text"
-                    placeholder="Search players by name or serial..."
+                    placeholder="Buscar jogadores por nome ou serial..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="max-w-sm"
@@ -54,7 +54,7 @@ export default function Players() {
 
             <div className="rounded-md border">
                 {isLoading ? (
-                    <div className="p-8 text-center text-muted-foreground">Loading players...</div>
+                    <div className="p-8 text-center text-muted-foreground">Carregando jogadores...</div>
                 ) : (
                     <PlayerTable players={displayPlayers || []} onViewPlayer={handleViewPlayer} />
                 )}

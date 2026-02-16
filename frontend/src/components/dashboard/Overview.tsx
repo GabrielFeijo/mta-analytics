@@ -2,7 +2,7 @@ import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts"
 
 export function Overview({ data }: { data: any[] }) {
     if (!data || data.length === 0) {
-        return <div className="flex h-[350px] items-center justify-center text-muted-foreground text-sm">No data available for this period</div>
+        return <div className="flex h-[350px] items-center justify-center text-muted-foreground text-sm">Sem dados disponíveis para este período</div>
     }
     return (
         <ResponsiveContainer width="100%" height={350}>
@@ -25,13 +25,13 @@ export function Overview({ data }: { data: any[] }) {
                     dataKey="earn"
                     fill="#22c55e"
                     radius={[4, 4, 0, 0]}
-                    name="Income"
+                    name="Receita"
                 />
                 <Bar
                     dataKey="spend"
                     fill="#ef4444"
                     radius={[4, 4, 0, 0]}
-                    name="Expense"
+                    name="Despesa"
                 />
             </BarChart>
         </ResponsiveContainer>

@@ -26,7 +26,7 @@ interface PlayerTableProps {
 
 export function PlayerTable({ players, onViewPlayer }: PlayerTableProps) {
     if (!players || players.length === 0) {
-        return <div className="text-center py-8 text-muted-foreground">No players found</div>
+        return <div className="text-center py-8 text-muted-foreground">Nenhum jogador encontrado</div>
     }
 
     return (
@@ -34,18 +34,18 @@ export function PlayerTable({ players, onViewPlayer }: PlayerTableProps) {
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead>Username</TableHead>
+                        <TableHead>Usuário</TableHead>
                         <TableHead>Serial</TableHead>
-                        <TableHead>Last Seen</TableHead>
-                        <TableHead>Risk Score</TableHead>
-                        <TableHead className="text-right">Playtime</TableHead>
+                        <TableHead>Visto por último</TableHead>
+                        <TableHead>Risco</TableHead>
+                        <TableHead className="text-right">Tempo de Jogo</TableHead>
                         <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {players.map((player) => (
                         <TableRow key={player.id}>
-                            <TableCell className="font-medium">{player.lastUsername || "Unknown"}</TableCell>
+                            <TableCell className="font-medium">{player.lastUsername || "Desconhecido"}</TableCell>
                             <TableCell>
                                 <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-xs font-semibold">
                                     {player.serial.substring(0, 12)}...
