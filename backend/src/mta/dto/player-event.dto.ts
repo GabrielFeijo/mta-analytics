@@ -14,7 +14,6 @@ export interface PlayerMetrics {
     hunger?: number;
     premiumPoints?: number;
     faction?: string;
-    // Add other possible fields that might come in 'data'
     [key: string]: any;
 }
 

@@ -13,7 +13,6 @@ export class AnalyticsService implements OnModuleInit {
 	) { }
 
 	async onModuleInit() {
-		// Schedule metrics refresh every hour
 		try {
 			await this.metricsQueue.add(
 				'refresh-metrics',
@@ -115,7 +114,7 @@ export class AnalyticsService implements OnModuleInit {
 				name,
 				earn: stats.earn,
 				spend: stats.spend,
-				total: stats.earn - stats.spend, // Net flow
+				total: stats.earn - stats.spend,
 			}));
 	}
 
@@ -183,7 +182,6 @@ export class AnalyticsService implements OnModuleInit {
 		});
 
 		if (!latest) {
-			// Trigger immediate generation if none exists
 			return this.generateEconomicMetrics();
 		}
 
@@ -218,10 +216,9 @@ export class AnalyticsService implements OnModuleInit {
 			}
 		});
 
-		// Ensure we don't have negative money in circulation due to missing history
 		moneyInCirc = Math.max(0, moneyInCirc);
 
-		const totalMoney = moneyInCirc; // For now they are the same as we only track char:money
+		const totalMoney = moneyInCirc;
 		const avgPlayerWealth = totalPlayers > 0 ? totalMoney / totalPlayers : 0;
 
 		let inflationRate = 0;

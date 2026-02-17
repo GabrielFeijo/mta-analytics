@@ -133,6 +133,14 @@ export class EventProcessor {
 					ammo_purchase: 'SPEND',
 					job_payout: 'EARN',
 					illegal_income: 'EARN',
+					spend_item: 'SPEND',
+					robbery_reward: 'EARN',
+					money_laundering: 'EARN',
+					medical_fee: 'SPEND',
+					government_fee: 'SPEND',
+					item_sale: 'EARN',
+					chat_fee: 'SPEND',
+					toll_fee: 'SPEND',
 				};
 
 				const type = transTypeMap[event.data.type] || 'SPEND';
