@@ -42,9 +42,6 @@ export class AnalyticsGateway implements OnGatewayConnection, OnGatewayDisconnec
                 connectedAt: new Date(),
             });
 
-            console.log(`Client connected: ${client.id}`);
-            console.log(`Active sessions: ${this.activeSessions.size}`);
-
             const initialData = await this.analyticsService.getInitialDashboardData();
             client.emit('initial-data', initialData);
 
@@ -56,8 +53,6 @@ export class AnalyticsGateway implements OnGatewayConnection, OnGatewayDisconnec
 
     handleDisconnect(client: Socket) {
         this.activeSessions.delete(client.id);
-        console.log(`Client disconnected: ${client.id}`);
-        console.log(`Active sessions: ${this.activeSessions.size}`);
     }
 
     @SubscribeMessage('subscribe:heatmap')

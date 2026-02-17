@@ -8,7 +8,6 @@ export class MetricProcessor {
 
     @Process('refresh-metrics')
     async handleRefresh(job: Job) {
-        console.log('Generating economic metrics snapshot...');
         await this.analyticsService.generateEconomicMetrics();
     }
 

@@ -31,12 +31,10 @@ export function useAnalyticsSocket(): UseAnalyticsSocketReturn {
         });
 
         socketInstance.on('connect', () => {
-            console.log('✅ Connected to analytics WebSocket');
             setIsConnected(true);
         });
 
         socketInstance.on('disconnect', (reason) => {
-            console.log('❌ Disconnected from analytics WebSocket:', reason);
             setIsConnected(false);
         });
 
@@ -48,7 +46,6 @@ export function useAnalyticsSocket(): UseAnalyticsSocketReturn {
         setSocket(socketInstance);
 
         return () => {
-            console.log('🔌 Closing WebSocket connection');
             socketInstance.disconnect();
         };
     }, [token]);

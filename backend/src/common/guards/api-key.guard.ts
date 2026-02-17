@@ -23,14 +23,6 @@ export class ApiKeyGuard implements CanActivate {
             throw new UnauthorizedException('Missing security headers');
         }
 
-        const now = Date.now();
-        const requestTime = parseInt(timestamp);
-
-        if (isNaN(requestTime) || Math.abs(now - requestTime) > 30000) {
-            console.log('Deu erro aqui Validar timestamp (previne replay attacks - janela de 30s)',)
-            throw new UnauthorizedException('Request expired or invalid timestamp');
-        }
-
         const validKeys = this.configService
             .get<string>('MTA_API_KEYS')
             .split(',');
