@@ -19,7 +19,11 @@ export default function Economy() {
 	});
 
 	if (isLoading) {
-		return <div className='p-8'>Carregando estatísticas da economia...</div>;
+		return (
+			<div className="flex items-center justify-center min-h-[400px]">
+				<div className="text-xl animate-pulse">Carregando estatísticas de economia...</div>
+			</div>
+		);
 	}
 
 	return (
