@@ -19,7 +19,6 @@ export class ApiKeyGuard implements CanActivate {
         const timestamp = request.headers['x-timestamp'];
 
         if (!apiKey || !signature || !timestamp) {
-            console.log('Deu erro aqui Validar presença dos headers')
             throw new UnauthorizedException('Missing security headers');
         }
 
@@ -28,7 +27,6 @@ export class ApiKeyGuard implements CanActivate {
             .split(',');
 
         if (!validKeys.includes(apiKey)) {
-            console.log('Deu erro aqui  Validar API Key',)
             throw new UnauthorizedException('Invalid API key');
         }
 
@@ -41,7 +39,6 @@ export class ApiKeyGuard implements CanActivate {
             .digest('hex');
 
         if (signature !== expectedSignature) {
-            console.log('Deu erro aqui Validar assinatura HMAC',)
             throw new UnauthorizedException('Invalid signature');
         }
 

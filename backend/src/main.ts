@@ -31,8 +31,8 @@ async function bootstrap() {
     const port = configService.get('PORT') || 3000;
     await app.listen(port, '0.0.0.0');
 
-    console.log(`🚀 Backend running on: http://localhost:${port}`);
-    console.log(`📊 Analytics WebSocket: ws://localhost:${port}/analytics`);
+    console.log(`Backend running on: http://localhost:${port}`);
+    console.log(`Analytics WebSocket: ws://localhost:${port}/analytics`);
 }
 
 bootstrap();

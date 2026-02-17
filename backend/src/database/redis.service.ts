@@ -16,17 +16,17 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
     async onModuleInit() {
         this.client.on('connect', () => {
-            console.log('✅ Connected to Redis');
+            console.log('Connected to Redis');
         });
 
         this.client.on('error', (err) => {
-            console.error('❌ Redis error:', err);
+            console.error('Redis error:', err);
         });
     }
 
     async onModuleDestroy() {
         await this.client.quit();
-        console.log('❌ Disconnected from Redis');
+        console.log('Disconnected from Redis');
     }
 
     async get(key: string): Promise<string | null> {
