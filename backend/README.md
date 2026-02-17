@@ -25,6 +25,7 @@ Este é o backend central do MTA Analytics, fornecendo:
 ## 🌐 Demonstração
 
 ### Local
+
 - **API**: [http://localhost:3000](http://localhost:3000)
 - **WebSocket**: `ws://localhost:3000/socket.io/`
 
@@ -47,17 +48,20 @@ docker-compose up -d
 ### Método 2: Instalação Manual
 
 1. **Instale dependências**
+
    ```bash
    cd backend
    npm install
    ```
 
 2. **Configure .env**
+
    ```bash
    cp .env.example .env
    ```
 
 3. **Configure banco de dados**
+
    ```bash
    npm run prisma:generate
    npm run prisma:migrate
@@ -82,4 +86,4 @@ npm run start:prod         # Produção
 npm run prisma:generate    # Gerar Prisma Client
 npm run prisma:migrate     # Criar/executar migrações
 npm run prisma:studio      # GUI do banco (localhost:5555)
-````
+```

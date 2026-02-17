@@ -12,7 +12,7 @@
 
 ## 📋 Sobre o Projeto
 
-O **MTA Analytics** é uma plataforma full-stack inovadora que fornece inteligência avançada para servidores de roleplay MTA, permitindo monitoramento em tempo real, análise econômica, rastreamento de jogadores e detecção de anomalias. O sistema é composto por um backend robusto, frontend interativo com visualizações 3D e um resource Lua para coleta automática de eventos.
+O **MTA Analytics** é uma plataforma full-stack que fornece inteligência para servidores de roleplay MTA, permitindo monitoramento em tempo real, análise econômica, rastreamento de jogadores e detecção de anomalias. O sistema é composto por um backend, frontend interativo com visualizações 3D e um resource Lua para coleta automática de eventos.
 
 ### 🎯 Destaques Técnicos
 
@@ -30,20 +30,24 @@ O **MTA Analytics** é uma plataforma full-stack inovadora que fornece inteligê
 ## 🌐 Demonstração Visual
 
 ### Dashboard Principal
+
 ![Dashboard Overview](https://i.imgur.com/05EJnf8.png)
-*Dashboard central com estatísticas de jogadores, eventos recentes e economia*
+_Dashboard central com estatísticas de jogadores, eventos recentes e economia_
 
 ### Visualização de Heatmap
+
 ![Heatmap View](https://i.imgur.com/CutcBj6.png)
-*Mapa de calor 3D mostrando concentração de jogadores e atividades no servidor*
+_Mapa de calor 3D mostrando concentração de jogadores e atividades no servidor_
 
 ### Sistema de Multas
+
 ![Fines Management](https://i.imgur.com/mHOYI5p.png)
-*Interface de gerenciamento de multas e penalidades aplicadas*
+_Interface de gerenciamento de multas e penalidades aplicadas_
 
 ### Resource Inicialização
+
 ![MTA Resource Init](https://i.imgur.com/6tx4l0B.png)
-*Console mostrando inicialização bem-sucedida do analytics resource*
+_Console mostrando inicialização bem-sucedida do analytics resource_
 
 ---
 
