@@ -20,7 +20,10 @@ Config.COLLECT_EVENTS = {
     MONEY_CHANGE = true,
     VEHICLE_ENTER = true,
     VEHICLE_EXIT = true,
+    PLAYER_STATUS_SYNC = true,
 }
+
+Config.STATUS_SYNC_INTERVAL = 60000 
 
 Config.DEBUG = true
 Config.MAX_API_FAILURES = 5
