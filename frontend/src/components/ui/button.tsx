@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/cn';
 
 export type ButtonVariant =
   | 'default'
@@ -30,11 +30,10 @@ const SIZE_CLASSES: Record<ButtonSize, string> = {
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   size?: ButtonSize;
-  asChild?: boolean;
 }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = 'default', size = 'default', asChild: _asChild, ...props }, ref) => (
+  ({ className, variant = 'default', size = 'default', ...props }, ref) => (
     <button
       ref={ref}
       className={cn(

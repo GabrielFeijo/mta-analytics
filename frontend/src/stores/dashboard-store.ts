@@ -1,16 +1,22 @@
 import { create } from 'zustand';
+import {
+  DashboardStats,
+  EconomicSnapshot,
+  Player,
+  RecentEvent,
+} from '@/types/telemetry';
 
 interface DashboardState {
-  stats: any | null;
-  onlinePlayers: any[];
-  recentEvents: any[];
+  stats: DashboardStats | null;
+  onlinePlayers: Player[];
+  recentEvents: RecentEvent[];
 
-  setStats: (stats: any) => void;
-  setOnlinePlayers: (players: any[]) => void;
-  addEvent: (event: any) => void;
+  setStats: (stats: DashboardStats) => void;
+  setOnlinePlayers: (players: Player[]) => void;
+  addEvent: (event: RecentEvent) => void;
   updatePlayerCount: (count: number) => void;
   adjustPlayerCount: (delta: number) => void;
-  updateEconomicSnapshot: (snapshot: any) => void;
+  updateEconomicSnapshot: (snapshot: EconomicSnapshot) => void;
 }
 
 export const useDashboardStore = create<DashboardState>((set) => ({

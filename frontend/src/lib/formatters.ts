@@ -1,10 +1,3 @@
-import { type ClassValue, clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
-
 export function formatNumber(num: number): string {
   const safe = Number.isFinite(num) ? num : 0;
   return new Intl.NumberFormat('pt-BR').format(safe);
@@ -19,7 +12,7 @@ export function formatCurrency(amount: number): string {
   }).format(safe);
 }
 
-export function formatDate(date: Date | string): string {
+export function formatDate(date: Date | string | null | undefined): string {
   if (!date) return '—';
   const parsed = new Date(date);
   if (Number.isNaN(parsed.getTime())) return '—';
@@ -32,7 +25,7 @@ export function formatDate(date: Date | string): string {
   }).format(parsed);
 }
 
-export function formatTime(date: Date | string): string {
+export function formatTime(date: Date | string | null | undefined): string {
   if (!date) return '—';
   const parsed = new Date(date);
   if (Number.isNaN(parsed.getTime())) return '—';
