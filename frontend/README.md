@@ -1,80 +1,29 @@
-# 🎨 MTA Analytics Frontend - Dashboard Interativo em Tempo Real
+# MTA Analytics Frontend - Dashboard Interativo em Tempo Real
 
-> Interface moderna e responsiva com visualizações 3D, gráficos interativos e WebSocket real-time
+Interface SPA em React + TypeScript + Tailwind CSS (tema **Garage Night**) com WebSocket único, gráficos Recharts e cartografia térmica 2D em Canvas sobre o mapa de San Andreas.
 
-[![React](https://img.shields.io/badge/React-18.2-blue?logo=react)](https://react.dev/)
-[![Vite](https://img.shields.io/badge/Vite-5.0-purple?logo=vite)](https://vitejs.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue?logo=typescript)](https://www.typescriptlang.org/)
-[![Tailwind](https://img.shields.io/badge/Tailwind-3.4-38B2AC?logo=tailwind-css)](https://tailwindcss.com/)
-[![Three.js](https://img.shields.io/badge/Three.js-0.160-black?logo=three.js)](https://threejs.org/)
+## Destaques Técnicos
 
-## 📋 Sobre
+- **WebSocket Único**: `AnalyticsSocketProvider` centraliza a conexão Socket.IO em `/analytics` para toda a aplicação.
+- **Cartografia Térmica 2D**: Mapa de calor interativo em Canvas (`-3000` a `+3000`) com camadas por tipo de evento e inspeção de coordenadas por zona.
+- **Gráficos & Auditoria**: Recharts para fluxo econômico de 7 dias, tabelas de transações, multas de radar, concessionárias, corridas (`mta_racing`) e fichas de pilotos com debounce na busca.
+- **Modo Snapshot Local**: Dados simulados isolados em `src/mocks/telemetry-snapshot.ts`, ativados apenas explicitamente pelo usuário na tela de login.
+- **Padronização**: Arquitetura modular 100% em `kebab-case` com tipagem TypeScript estrita.
 
-O **MTA Analytics Frontend** é a interface visual completa da plataforma, oferecendo:
-
-- **Dashboard Interativo**: Métricas em tempo real via WebSocket
-- **Visualizações 3D**: Mapa de calor com Three.js sobre o mapa do servidor
-- **Gráficos Responsivos**: Recharts com D3 para análises complexas
-- **UI Moderna**: Radix UI + Tailwind CSS design system
-- **Type Safe**: TypeScript em 100% do código
-- **Rápido**: Vite para dev/build otimizado
-
----
-
-## 🌐 Demonstração
-
-### Local
-- **Frontend**: [http://localhost:5173](http://localhost:5173)
-- **Backend API**: [http://localhost:3000](http://localhost:3000)
-
----
-
-## 🚀 Instalação
-
-### Pré-requisitos
-
-- Node.js 18+
-- Backend rodando em `http://localhost:3000`
-
-### Instalação Manual
-
-1. **Instale dependências**
-   ```bash
-   cd frontend
-   npm install
-   ```
-
-2. **Configure .env** (opcional)
-   ```bash
-   cp .env.example .env
-   ```
-   
-   ```env
-   VITE_API_URL=http://localhost:3000
-   ```
-
-3. **Inicie dev server**
-   ```bash
-   npm run dev
-   ```
-
-4. **Acesse**
-   - Abra [http://localhost:5173](http://localhost:5173)
-
----
-
-## 📊 Scripts
+## Instalação Manual
 
 ```bash
-# Desenvolvimento
-npm run dev              # Dev server (localhost:5173)
-npm run build            # Build otimizado para produção
-npm run preview          # Preview do build
+cd frontend
+npm install
+cp .env.example .env
+npm run dev
+```
 
-# Type checking
-npm run type-check       # Apenas verificar tipos
+## Scripts
 
-# Linting (se configurado)
-npm run lint
-npm run format
+```bash
+npm run dev         # Dev server (http://localhost:5173)
+npm run type-check  # Verificação estrita de tipos (tsc --noEmit)
+npm run build       # Type-check + build de produção (dist/)
+npm run preview     # Preview do build de produção
 ```
