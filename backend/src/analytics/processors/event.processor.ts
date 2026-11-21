@@ -2,11 +2,14 @@ import { Process, Processor } from '@nestjs/bull';
 import { Job } from 'bull';
 import { PrismaService } from '../../database/prisma.service';
 import { PlayerEventZod, PlayerMetrics } from '../../mta/dto/player-event.dto';
-import { Prisma } from '@prisma/client';
+import { AnalyticsGateway } from '../analytics.gateway';
 
 @Processor('events')
 export class EventProcessor {
-	constructor(private prisma: PrismaService) { }
+	constructor(
+		private prisma: PrismaService,
+		private gateway: AnalyticsGateway,
+	) { }
 
 	@Process('process-event')
 	async handleEvent(job: Job<PlayerEventZod>) {
@@ -27,17 +30,59 @@ export class EventProcessor {
 				},
 			});
 
-			await this.prisma.event.create({
+			const createdEvent = await this.prisma.event.create({
 				data: {
 					eventType: event.eventType,
 					playerId: player.id,
 					positionX: event.position?.x,
 					positionY: event.position?.y,
 					positionZ: event.position?.z,
-					data: event.data as Prisma.InputJsonValue,
+					data: event.data as any,
 					timestamp: event.timestamp ? new Date(event.timestamp) : new Date(),
 				},
+				include: {
+					player: {
+						select: {
+							lastUsername: true,
+							serial: true,
+						},
+					},
+				},
 			});
+
+			if (event.eventType === 'player_join') {
+				await this.prisma.playerSession.create({
+					data: {
+						playerId: player.id,
+						loginAt: event.timestamp ? new Date(event.timestamp) : new Date(),
+						ip: event.data?.ip ? String(event.data.ip) : undefined,
+					},
+				});
+				this.gateway.broadcastEvent('player:online', { playerId: player.id });
+			} else if (event.eventType === 'player_quit') {
+				const openSession = await this.prisma.playerSession.findFirst({
+					where: { playerId: player.id, logoutAt: null },
+					orderBy: { loginAt: 'desc' },
+				});
+				if (openSession) {
+					const logoutAt = event.timestamp ? new Date(event.timestamp) : new Date();
+					const durationMin = Math.max(
+						1,
+						Math.round((logoutAt.getTime() - openSession.loginAt.getTime()) / 60000),
+					);
+					await Promise.all([
+						this.prisma.playerSession.update({
+							where: { id: openSession.id },
+							data: { logoutAt, duration: durationMin },
+						}),
+						this.prisma.player.update({
+							where: { id: player.id },
+							data: { totalPlaytime: { increment: durationMin } },
+						}),
+					]);
+				}
+				this.gateway.broadcastEvent('player:offline', { playerId: player.id });
+			}
 
 			if (this.isSocialEvent(event)) {
 				await this.updatePlayerRelationships(event, player.id);
@@ -46,6 +91,8 @@ export class EventProcessor {
 			if (this.isEconomicEvent(event)) {
 				await this.updateEconomicMetrics(event, player.id);
 			}
+
+			this.gateway.broadcastEvent('event:new', createdEvent);
 		} catch (error) {
 			console.error('Error processing event:', error);
 			throw error;
@@ -115,7 +162,7 @@ export class EventProcessor {
 				}
 				break;
 
-			case 'player_transaction':
+			case 'player_transaction': {
 				const transTypeMap: Record<
 					string,
 					'EARN' | 'SPEND' | 'TRANSFER_IN' | 'TRANSFER_OUT'
@@ -141,6 +188,10 @@ export class EventProcessor {
 					item_sale: 'EARN',
 					chat_fee: 'SPEND',
 					toll_fee: 'SPEND',
+					race_clean_spend: 'SPEND',
+					race_dirty_spend: 'SPEND',
+					race_clean_earn: 'EARN',
+					race_dirty_earn: 'EARN',
 				};
 
 				const type = transTypeMap[event.data.type] || 'SPEND';
@@ -149,20 +200,21 @@ export class EventProcessor {
 					data: {
 						playerId,
 						type,
-						amount: Math.abs(event.data.amount),
-						balance: 0,
+						amount: Math.abs(Number(event.data.amount) || 0),
+						balance: Number(event.data.money) || 0,
 						source: event.data.source_resource || 'bank',
 						metadata: event.data,
 					},
 				});
 				break;
+			}
 
 			case 'vehicle_purchase':
 				await this.prisma.transaction.create({
 					data: {
 						playerId,
 						type: 'SPEND',
-						amount: Math.abs(event.data.price),
+						amount: Math.abs(Number(event.data.price) || 0),
 						balance: 0,
 						source: event.data.source_resource || 'carshop',
 						metadata: event.data,
@@ -175,7 +227,7 @@ export class EventProcessor {
 					data: {
 						playerId,
 						type: 'SPEND',
-						amount: Math.abs(event.data.amount),
+						amount: Math.abs(Number(event.data.amount) || 0),
 						balance: 0,
 						source: 'traffic_fine',
 						metadata: event.data,
@@ -185,8 +237,8 @@ export class EventProcessor {
 		}
 	}
 
-	private extractPlayerMetrics(data: PlayerMetrics): Prisma.PlayerUpdateInput {
-		const metrics: Prisma.PlayerUpdateInput = {};
+	private extractPlayerMetrics(data: PlayerMetrics): Record<string, any> {
+		const metrics: Record<string, any> = {};
 		if (data.money !== undefined) metrics.money = Number(data.money);
 		if (data.bank !== undefined) metrics.bank = Number(data.bank);
 		if (data.level !== undefined) metrics.level = Number(data.level);

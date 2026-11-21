@@ -243,16 +243,20 @@ export class AnalyticsService implements OnModuleInit {
 		startDate: Date;
 		endDate: Date;
 	}) {
-		const events = await this.prisma.event.findMany({
-			where: {
-				eventType: filters.eventType,
-				timestamp: {
-					gte: filters.startDate,
-					lte: filters.endDate,
-				},
-				positionX: { not: null },
-				positionY: { not: null },
+		const whereClause: any = {
+			timestamp: {
+				gte: filters.startDate,
+				lte: filters.endDate,
 			},
+			positionX: { not: null },
+			positionY: { not: null },
+		};
+		if (filters.eventType && filters.eventType !== 'all') {
+			whereClause.eventType = filters.eventType;
+		}
+
+		const events = await this.prisma.event.findMany({
+			where: whereClause,
 			select: {
 				positionX: true,
 				positionY: true,
@@ -271,7 +275,7 @@ export class AnalyticsService implements OnModuleInit {
 			heatmap.set(key, (heatmap.get(key) || 0) + 1);
 		});
 
-		const maxIntensity = Math.max(...heatmap.values());
+		const maxIntensity = Math.max(1, ...heatmap.values());
 
 		return Array.from(heatmap.entries()).map(([key, count]) => {
 			const [x, y] = key.split(',').map(Number);
@@ -318,12 +322,13 @@ export class AnalyticsService implements OnModuleInit {
 				timestamp: {
 					gte: startDate,
 				},
-				type: 'SPEND',
 				OR: [
 					{ source: 'carshop' },
 					{ source: 'shop_purchase' },
+					{ source: 'mta_racing' },
 					{ source: { contains: 'shop' } },
 					{ source: { contains: 'vehicle' } },
+					{ source: { contains: 'racing' } },
 				],
 			},
 			include: {
@@ -340,41 +345,67 @@ export class AnalyticsService implements OnModuleInit {
 
 		const vehicleSales = transactions.filter(
 			(tx) =>
-				tx.source === 'carshop' ||
-				tx.source?.includes('vehicle') ||
-				(tx.metadata as any)?.model,
+				tx.type === 'SPEND' &&
+				(tx.source === 'carshop' ||
+					tx.source?.includes('vehicle') ||
+					Boolean((tx.metadata as any)?.model)),
 		);
 
 		const shopSales = transactions.filter(
 			(tx) =>
-				tx.source === 'shop_purchase' ||
-				(tx.source?.includes('shop') && tx.source !== 'carshop'),
+				tx.type === 'SPEND' &&
+				(tx.source === 'shop_purchase' ||
+					(tx.source?.includes('shop') && tx.source !== 'carshop')),
 		);
 
-		const totalRevenue = transactions.reduce((acc, tx) => acc + tx.amount, 0);
+		const raceActivity = transactions.filter(
+			(tx) =>
+				tx.source === 'mta_racing' ||
+				tx.source?.includes('racing') ||
+				String((tx.metadata as any)?.type || '').startsWith('race_'),
+		);
+
+		const vehicleRevenue = vehicleSales.reduce((acc, tx) => acc + tx.amount, 0);
+		const shopRevenue = shopSales.reduce((acc, tx) => acc + tx.amount, 0);
+		const raceVolume = raceActivity.reduce((acc, tx) => acc + tx.amount, 0);
+		const totalRevenue = vehicleRevenue + shopRevenue + raceVolume;
 
 		return {
 			vehicleSales: vehicleSales.map((tx) => ({
 				id: tx.id.toString(),
-				player: tx.player.lastUsername,
+				player: tx.player?.lastUsername || 'Desconhecido',
 				amount: tx.amount,
-				vehicleName: (tx.metadata as any)?.vehicleName || 'Unknown Vehicle',
+				vehicleName: (tx.metadata as any)?.vehicleName || 'Veículo',
 				timestamp: tx.timestamp,
 			})),
 			shopSales: shopSales.map((tx) => ({
 				id: tx.id.toString(),
-				player: tx.player.lastUsername,
+				player: tx.player?.lastUsername || 'Desconhecido',
 				amount: tx.amount,
-				itemName: (tx.metadata as any)?.description || 'Unknown Item',
+				itemName: (tx.metadata as any)?.description || 'Item de Loja',
+				timestamp: tx.timestamp,
+			})),
+			raceActivity: raceActivity.map((tx) => ({
+				id: tx.id.toString(),
+				player: tx.player?.lastUsername || 'Desconhecido',
+				type: tx.type,
+				amount: tx.amount,
+				currency: String((tx.metadata as any)?.type || '').includes('dirty')
+					? 'dirty'
+					: 'clean',
+				description:
+					(tx.metadata as any)?.description || 'Bateria Clandestina (mta_racing)',
 				timestamp: tx.timestamp,
 			})),
 			stats: {
 				totalRevenue,
-				vehicleRevenue: vehicleSales.reduce((acc, tx) => acc + tx.amount, 0),
-				shopRevenue: shopSales.reduce((acc, tx) => acc + tx.amount, 0),
+				vehicleRevenue,
+				shopRevenue,
+				raceVolume,
 				totalTransactions: transactions.length,
 				vehicleCount: vehicleSales.length,
 				shopCount: shopSales.length,
+				raceCount: raceActivity.length,
 			},
 		};
 	}
