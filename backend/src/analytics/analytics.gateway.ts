@@ -34,9 +34,6 @@ export class AnalyticsGateway implements OnGatewayConnection, OnGatewayDisconnec
                 return;
             }
 
-            // TODO: Validar JWT
-            // const user = await this.authService.validateToken(token);
-
             this.activeSessions.set(client.id, {
                 socketId: client.id,
                 connectedAt: new Date(),

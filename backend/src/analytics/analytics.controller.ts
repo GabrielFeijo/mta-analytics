@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { AnalyticsService } from './analytics.service';
 
@@ -38,12 +38,12 @@ export class AnalyticsController {
 
 	@Get('players/:id/activity')
 	async getPlayerActivity(
-		@Query('id') id: string,
+		@Param('id') id: string,
 		@Query('hours') hours?: string,
 	) {
-		const hoursNum = hours ? parseInt(hours) : 24;
+		const hoursNum = hours ? parseInt(hours, 10) : 24;
 		return this.analyticsService.getPlayerActivityTimeline(
-			parseInt(id),
+			parseInt(id, 10),
 			hoursNum,
 		);
 	}
