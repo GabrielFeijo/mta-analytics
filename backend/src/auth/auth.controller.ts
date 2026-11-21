@@ -1,29 +1,57 @@
-import { Controller, Post, Body, Get, UseGuards, Request } from '@nestjs/common';
+import {
+    Body,
+    Controller,
+    Get,
+    Headers,
+    HttpCode,
+    Post,
+    Request,
+    UseGuards,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto, RegisterDto } from './dto/auth.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { RateLimitGuard } from '../common/guards/rate-limit.guard';
+import { RateLimit } from '../common/decorators/rate-limit.decorator';
 
 @Controller('auth')
 export class AuthController {
-    constructor(private authService: AuthService) { }
+    constructor(private readonly authService: AuthService) {}
 
     @Post('login')
+    @HttpCode(200)
+    @UseGuards(RateLimitGuard)
+    @RateLimit({ limit: 10, ttlSeconds: 60 })
     async login(@Body() loginDto: LoginDto) {
         return this.authService.login(loginDto.email, loginDto.password);
     }
 
     @Post('register')
-    async register(@Body() registerDto: RegisterDto) {
+    @UseGuards(RateLimitGuard)
+    @RateLimit({ limit: 5, ttlSeconds: 60 })
+    async register(
+        @Body() registerDto: RegisterDto,
+        @Headers('authorization') authHeader?: string,
+    ) {
         return this.authService.register(
             registerDto.username,
             registerDto.email,
             registerDto.password,
+            authHeader,
         );
+    }
+
+    @Post('logout')
+    @HttpCode(200)
+    @UseGuards(JwtAuthGuard)
+    async logout(@Headers('authorization') authHeader?: string) {
+        const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+        return this.authService.logout(token);
     }
 
     @Get('me')
     @UseGuards(JwtAuthGuard)
-    async getProfile(@Request() req) {
+    async getProfile(@Request() req: { user: { userId: number } }) {
         return this.authService.validateUser(req.user.userId);
     }
 }

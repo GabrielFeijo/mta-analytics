@@ -1,19 +1,43 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-
+import helmet from 'helmet';
+import compression from 'compression';
 import { AppModule } from './app.module';
+import { validateEnvironment } from './common/config/env.validation';
 
-async function bootstrap() {
-    (BigInt.prototype as any).toJSON = function () {
+function parseCorsOrigins(rawOrigin?: string): string[] | boolean {
+    if (!rawOrigin || rawOrigin.trim() === '*') {
+        return rawOrigin?.trim() === '*' ? true : ['http://localhost:5173'];
+    }
+    const origins = rawOrigin
+        .split(',')
+        .map((origin) => origin.trim())
+        .filter(Boolean);
+    return origins.length > 0 ? origins : ['http://localhost:5173'];
+}
+
+async function bootstrap(): Promise<void> {
+    validateEnvironment();
+
+    (BigInt.prototype as unknown as { toJSON: () => string }).toJSON = function () {
         return this.toString();
     };
 
-    const app = await NestFactory.create(AppModule, {
-        cors: true,
-    });
-
+    const logger = new Logger('Bootstrap');
+    const app = await NestFactory.create(AppModule, { rawBody: true });
     const configService = app.get(ConfigService);
+
+    app.use(helmet());
+    app.use(compression());
+
+    const corsOrigin = parseCorsOrigins(
+        configService.get<string>('CORS_ORIGIN') || configService.get<string>('FRONTEND_URL'),
+    );
+    app.enableCors({
+        origin: corsOrigin,
+        credentials: true,
+    });
 
     app.useGlobalPipes(
         new ValidationPipe({
@@ -28,11 +52,11 @@ async function bootstrap() {
 
     app.setGlobalPrefix('api');
 
-    const port = configService.get('PORT') || 3000;
+    const port = Number(configService.get<string>('PORT')) || 3000;
     await app.listen(port, '0.0.0.0');
 
-    console.log(`Backend running on: http://localhost:${port}`);
-    console.log(`Analytics WebSocket: ws://localhost:${port}/analytics`);
+    logger.log(`Backend running on: http://localhost:${port}`);
+    logger.log(`Analytics WebSocket: ws://localhost:${port}/analytics`);
 }
 
 bootstrap();

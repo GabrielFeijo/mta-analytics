@@ -17,8 +17,8 @@ import { EconomyModule } from './economy/economy.module';
         BullModule.forRoot({
             redis: {
                 host: process.env.REDIS_HOST || 'localhost',
-                port: parseInt(process.env.REDIS_PORT) || 6379,
-                password: process.env.REDIS_PASSWORD,
+                port: parseInt(process.env.REDIS_PORT || '6379', 10) || 6379,
+                password: process.env.REDIS_PASSWORD || undefined,
             },
         }),
         DatabaseModule,
@@ -29,4 +29,4 @@ import { EconomyModule } from './economy/economy.module';
         EconomyModule,
     ],
 })
-export class AppModule { }
+export class AppModule {}
