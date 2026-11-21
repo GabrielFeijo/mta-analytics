@@ -1,37 +1,41 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+
+const PLAYER_SUMMARY_SELECT = {
+    id: true,
+    serial: true,
+    lastUsername: true,
+    lastSeen: true,
+    riskScore: true,
+    totalPlaytime: true,
+    playedTime: true,
+    money: true,
+    bank: true,
+    dirtyMoney: true,
+    level: true,
+    job: true,
+    faction: true,
+    characterId: true,
+} as const;
 
 @Injectable()
 export class PlayersService {
-    constructor(private prisma: PrismaService) { }
+    constructor(private readonly prisma: PrismaService) {}
 
     async getOnlinePlayers() {
         const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
 
         return this.prisma.player.findMany({
             where: {
-                lastSeen: {
-                    gte: fiveMinutesAgo,
-                },
+                lastSeen: { gte: fiveMinutesAgo },
             },
-            select: {
-                id: true,
-                serial: true,
-                lastUsername: true,
-                lastSeen: true,
-                riskScore: true,
-                totalPlaytime: true,
-                level: true,
-                job: true,
-            },
-            orderBy: {
-                lastSeen: 'desc',
-            },
+            select: PLAYER_SUMMARY_SELECT,
+            orderBy: { lastSeen: 'desc' },
         });
     }
 
     async getPlayer(id: number) {
-        return this.prisma.player.findUnique({
+        const player = await this.prisma.player.findUnique({
             where: { id },
             include: {
                 sessions: {
@@ -56,26 +60,31 @@ export class PlayersService {
                 },
             },
         });
+
+        if (!player) {
+            throw new NotFoundException(`Jogador #${id} não encontrado.`);
+        }
+        return player;
     }
 
     async searchPlayers(query: string) {
+        const trimmed = (query || '').trim();
+        if (!trimmed) {
+            return [];
+        }
+
         return this.prisma.player.findMany({
             where: {
                 OR: [
-                    { lastUsername: { contains: query, mode: 'insensitive' } },
-                    { serial: { contains: query, mode: 'insensitive' } },
+                    { lastUsername: { contains: trimmed, mode: 'insensitive' } },
+                    { serial: { contains: trimmed, mode: 'insensitive' } },
+                    { job: { contains: trimmed, mode: 'insensitive' } },
+                    { faction: { contains: trimmed, mode: 'insensitive' } },
                 ],
             },
-            take: 20,
-            select: {
-                id: true,
-                serial: true,
-                lastUsername: true,
-                lastSeen: true,
-                riskScore: true,
-                level: true,
-                job: true,
-            },
+            take: 25,
+            select: PLAYER_SUMMARY_SELECT,
+            orderBy: { lastSeen: 'desc' },
         });
     }
 
@@ -85,7 +94,7 @@ export class PlayersService {
         });
 
         if (!player) {
-            return null;
+            throw new NotFoundException(`Jogador #${id} não encontrado.`);
         }
 
         const [eventCount, transactionCount, sessionCount] = await Promise.all([

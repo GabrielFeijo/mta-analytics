@@ -1,11 +1,12 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, ParseIntPipe, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { EconomyService } from './economy.service';
+import { TimeSeriesQueryDto, TransactionLimitQueryDto } from './dto/economy-query.dto';
 
 @Controller('economy')
 @UseGuards(JwtAuthGuard)
 export class EconomyController {
-    constructor(private economyService: EconomyService) { }
+    constructor(private readonly economyService: EconomyService) {}
 
     @Get('snapshot')
     async getSnapshot() {
@@ -13,25 +14,20 @@ export class EconomyController {
     }
 
     @Get('timeseries')
-    async getTimeSeries(
-        @Query('metric') metric: string,
-        @Query('period') period: string,
-    ) {
-        return this.economyService.getTimeSeries(metric, period);
+    async getTimeSeries(@Query() query: TimeSeriesQueryDto) {
+        return this.economyService.getTimeSeries(query.metric, query.period ?? '24h');
     }
 
     @Get('transactions/recent')
-    async getRecentTransactions(@Query('limit') limit?: string) {
-        const limitNum = limit ? parseInt(limit) : 50;
-        return this.economyService.getRecentTransactions(limitNum);
+    async getRecentTransactions(@Query() query: TransactionLimitQueryDto) {
+        return this.economyService.getRecentTransactions(query.limit ?? 50);
     }
 
     @Get('transactions/player/:id')
     async getPlayerTransactions(
-        @Query('id') id: string,
-        @Query('limit') limit?: string,
+        @Param('id', ParseIntPipe) id: number,
+        @Query() query: TransactionLimitQueryDto,
     ) {
-        const limitNum = limit ? parseInt(limit) : 50;
-        return this.economyService.getPlayerTransactions(parseInt(id), limitNum);
+        return this.economyService.getPlayerTransactions(id, query.limit ?? 50);
     }
 }

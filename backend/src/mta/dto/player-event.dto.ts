@@ -1,37 +1,36 @@
-import { IsString, IsNumber, IsOptional, IsObject, ValidateNested } from 'class-validator';
-import { Type } from 'class-transformer';
-import { z } from 'zod';
+import { Transform, Type } from 'class-transformer';
+import { IsNumber, IsObject, IsOptional, IsString, ValidateNested } from 'class-validator';
 
 export interface PlayerMetrics {
     money?: number;
     bank?: number;
+    dirtyMoney?: number;
     level?: number;
-    experience?: number;
+    xp?: number;
     job?: string;
     playedTime?: number;
-    characterId?: number;
+    id?: number;
     thirst?: number;
     hunger?: number;
-    premiumPoints?: number;
+    pp?: number;
     faction?: string;
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
-export const PlayerEventSchema = z.object({
-    eventType: z.string(),
-    playerId: z.number().optional(),
-    playerSerial: z.string(),
-    playerName: z.string(),
-    position: z.object({
-        x: z.number(),
-        y: z.number(),
-        z: z.number(),
-    }).optional(),
-    data: z.record(z.any()),
-    timestamp: z.number().optional(),
-});
-
-export type PlayerEventZod = z.infer<typeof PlayerEventSchema>;
+export interface PlayerEventPayload {
+    eventType: string;
+    playerId?: number;
+    playerSerial: string;
+    playerName: string;
+    position?: {
+        x: number;
+        y: number;
+        z: number;
+    };
+    data: PlayerMetrics;
+    timestamp?: number;
+    serverId?: string;
+}
 
 class PositionDto {
     @IsNumber()
@@ -63,6 +62,12 @@ export class PlayerEventDto {
     @IsOptional()
     position?: PositionDto;
 
+    @Transform(({ value }) => {
+        if (value === null || value === undefined || Array.isArray(value)) {
+            return {};
+        }
+        return value;
+    })
     @IsObject()
     data: Record<string, any>;
 
