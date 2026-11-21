@@ -1,3 +1,4 @@
+import { ArrowDownRight, ArrowUpRight } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -7,21 +8,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { formatCurrency, formatTime } from '@/lib/utils';
-import { ArrowDownRight, ArrowUpRight } from 'lucide-react';
-
-interface TransactionItem {
-  id: number | string;
-  type: 'EARN' | 'SPEND' | 'TRANSFER_IN' | 'TRANSFER_OUT';
-  amount: number;
-  source: string;
-  balance?: number;
-  description?: string;
-  timestamp: string;
-  player?: {
-    lastUsername: string;
-  };
-}
+import { formatCurrency, formatTime } from '@/lib/formatters';
+import { Transaction } from '@/types/telemetry';
 
 const TYPE_META: Record<
   string,
@@ -29,11 +17,25 @@ const TYPE_META: Record<
 > = {
   EARN: { label: 'RECEITA', isInflow: true, variant: 'ok' },
   TRANSFER_IN: { label: 'TRANSF. RECEBIDA', isInflow: true, variant: 'brass' },
+  ADMIN_ADD: { label: 'CRÉDITO ADMIN', isInflow: true, variant: 'ok' },
   SPEND: { label: 'DESPESA', isInflow: false, variant: 'default' },
   TRANSFER_OUT: { label: 'TRANSF. ENVIADA', isInflow: false, variant: 'default' },
+  ADMIN_REMOVE: { label: 'DÉBITO ADMIN', isInflow: false, variant: 'default' },
 };
 
-export function TransactionTable({ transactions }: { transactions: TransactionItem[] }) {
+function resolveTransactionDescription(tx: Transaction): string | undefined {
+  if (tx.description) {
+    return tx.description;
+  }
+  const meta = tx.metadata;
+  if (!meta) {
+    return undefined;
+  }
+  const candidate = meta.description ?? meta.vehicleName ?? meta.reason;
+  return typeof candidate === 'string' && candidate.trim() ? candidate : undefined;
+}
+
+export function TransactionTable({ transactions }: { transactions: Transaction[] }) {
   if (!transactions || transactions.length === 0) {
     return (
       <div className="py-10 text-center text-xs text-ink-dim">
@@ -60,6 +62,7 @@ export function TransactionTable({ transactions }: { transactions: TransactionIt
             isInflow: false,
             variant: 'default' as const,
           };
+          const description = resolveTransactionDescription(tx);
 
           return (
             <TableRow key={tx.id || idx}>
@@ -76,14 +79,17 @@ export function TransactionTable({ transactions }: { transactions: TransactionIt
                   {meta.label}
                 </Badge>
               </TableCell>
-              <TableCell className="max-w-[260px] truncate text-ink-dim" title={tx.description || tx.source}>
-                <span className="font-mono text-xs text-ink">{tx.source}</span>
-                {tx.description && (
-                  <span className="ml-2 text-2xs text-ink-faint">— {tx.description}</span>
+              <TableCell
+                className="max-w-[280px] truncate text-ink-dim"
+                title={description || tx.source}
+              >
+                <span className="font-mono text-xs text-ink">{tx.source || 'sistema'}</span>
+                {description && (
+                  <span className="ml-2 text-2xs text-ink-faint">— {description}</span>
                 )}
               </TableCell>
               <TableCell
-                className={`whitespace-nowrap text-right font-mono tabular-nums font-medium ${
+                className={`whitespace-nowrap text-right font-mono font-medium tabular-nums ${
                   meta.isInflow ? 'text-ok' : 'text-signal'
                 }`}
               >

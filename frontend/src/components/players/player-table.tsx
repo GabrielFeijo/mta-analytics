@@ -1,3 +1,4 @@
+import { Eye } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -8,9 +9,8 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Eye } from 'lucide-react';
-import { Player } from '@/lib/types';
-import { formatCurrency, formatDate, formatPlaytimeHours } from '@/lib/utils';
+import { Player } from '@/types/telemetry';
+import { formatCurrency, formatDate, formatPlaytimeHours } from '@/lib/formatters';
 
 interface PlayerTableProps {
   players: Player[];
@@ -47,6 +47,7 @@ export function PlayerTable({ players, onViewPlayer }: PlayerTableProps) {
           const riskVariant =
             riskPct >= 70 ? 'default' : riskPct >= 30 ? 'warn' : 'ok';
           const totalWealth = (Number(player.money) || 0) + (Number(player.bank) || 0);
+          const dirtyMoney = Number(player.dirtyMoney) || 0;
 
           return (
             <TableRow key={player.id}>
@@ -72,7 +73,12 @@ export function PlayerTable({ players, onViewPlayer }: PlayerTableProps) {
                 )}
               </TableCell>
               <TableCell className="whitespace-nowrap font-mono tabular-nums text-brass">
-                {formatCurrency(totalWealth)}
+                <div>{formatCurrency(totalWealth)}</div>
+                {dirtyMoney > 0 && (
+                  <div className="text-[10px] text-warn">
+                    +{formatCurrency(dirtyMoney)} sujo
+                  </div>
+                )}
               </TableCell>
               <TableCell>
                 <code className="rounded-sm border border-line bg-bg2 px-1.5 py-0.5 font-mono text-2xs text-ink-dim">

@@ -1,22 +1,25 @@
 import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Users, Activity, DollarSign, Flag, ShieldAlert } from 'lucide-react';
-import { analyticsApi } from '@/lib/api';
-import { useAnalyticsSocket } from '@/hooks/useAnalyticsSocket';
-import { useDashboardStore } from '@/stores/dashboardStore';
-import { formatNumber, formatCurrency } from '@/lib/utils';
+import { Activity, DollarSign, Flag, ShieldAlert, Users } from 'lucide-react';
+import { analyticsApi } from '@/services/analytics-api';
+import { useAnalyticsSocket } from '@/hooks/use-analytics-socket';
+import { useDashboardStore } from '@/stores/dashboard-store';
+import { formatCurrency, formatNumber } from '@/lib/formatters';
+import { DashboardStats, EconomicSnapshot, RecentEvent } from '@/types/telemetry';
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
-  CardDescription,
 } from '@/components/ui/card';
-import { Overview } from '@/components/dashboard/Overview';
-import { RecentActivity } from '@/components/dashboard/RecentActivity';
-import { HeatmapView } from '@/components/dashboard/HeatmapView';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { MetricCard } from '@/components/dashboard/metric-card';
+import { EconomyOverviewChart } from '@/components/dashboard/economy-overview-chart';
+import { RecentActivity } from '@/components/dashboard/recent-activity';
+import { HeatmapView } from '@/components/dashboard/heatmap-view';
+import { QueryErrorState } from '@/components/common/query-error-state';
 
 export default function Dashboard() {
   const { socket, isConnected, subscribe } = useAnalyticsSocket();
@@ -28,20 +31,25 @@ export default function Dashboard() {
     updateEconomicSnapshot,
   } = useDashboardStore();
 
-  const { data: initialData, isLoading } = useQuery({
+  const {
+    data: initialData,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: analyticsApi.getDashboardStats,
     refetchInterval: 30000,
   });
 
-  const { data: overviewData } = useQuery({
+  const { data: overviewData = [] } = useQuery({
     queryKey: ['dashboard-overview'],
     queryFn: analyticsApi.getOverviewStats,
     refetchInterval: 60000,
   });
 
   const { data: resourcesData } = useQuery({
-    queryKey: ['resources-stats'],
+    queryKey: ['resources-stats', 24],
     queryFn: () => analyticsApi.getResourcesStats(24),
     refetchInterval: 60000,
   });
@@ -53,27 +61,19 @@ export default function Dashboard() {
   }, [initialData, setStats]);
 
   useEffect(() => {
-    if (!socket || !isConnected) return;
+    if (!socket || !isConnected) return undefined;
 
-    subscribe('initial-data', (data) => {
-      setStats(data);
-    });
+    const cleanups = [
+      subscribe<DashboardStats>('initial-data', (data) => setStats(data)),
+      subscribe<RecentEvent>('event:new', (event) => addEvent(event)),
+      subscribe('player:online', () => adjustPlayerCount(1)),
+      subscribe('player:offline', () => adjustPlayerCount(-1)),
+      subscribe<EconomicSnapshot>('economy:update', (data) => updateEconomicSnapshot(data)),
+    ];
 
-    subscribe('event:new', (event) => {
-      addEvent(event);
-    });
-
-    subscribe('player:online', () => {
-      adjustPlayerCount(1);
-    });
-
-    subscribe('player:offline', () => {
-      adjustPlayerCount(-1);
-    });
-
-    subscribe('economy:update', (data) => {
-      updateEconomicSnapshot(data);
-    });
+    return () => {
+      cleanups.forEach((unsub) => unsub());
+    };
   }, [
     socket,
     isConnected,
@@ -92,81 +92,82 @@ export default function Dashboard() {
     );
   }
 
+  if (isError && !stats) {
+    return (
+      <QueryErrorState
+        message="Falha ao sincronizar a telemetria inicial do dashboard."
+        onRetry={() => void refetch()}
+      />
+    );
+  }
+
   const currentStats = stats || initialData;
+  const riskAlertsCount = Number(currentStats?.riskAlerts) || 0;
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-md border border-line bg-bg1 px-4 py-3">
-          <div className="flex items-center justify-between text-2xs text-ink-faint">
-            <span>TOTAL DE PILOTOS</span>
-            <Users className="h-3.5 w-3.5 text-ink-dim" strokeWidth={1.75} />
-          </div>
-          <div className="mt-1 font-mono text-2xl font-medium tabular-nums text-ink">
-            {formatNumber(currentStats?.totalPlayers || 0)}
-          </div>
-          <div className="mt-0.5 flex items-center justify-between text-2xs text-ink-dim">
-            <span>Base cadastrada</span>
+        <MetricCard
+          label="TOTAL DE PILOTOS"
+          value={formatNumber(currentStats?.totalPlayers || 0)}
+          icon={Users}
+          footerLeft="Base cadastrada"
+          footerRight={
             <span className="font-mono text-ok">
-              {currentStats?.trends?.playerGrowth || '+0'}% (24h)
+              {currentStats?.trends?.playerGrowth || '+0.0'}% (24h)
             </span>
-          </div>
-        </div>
+          }
+        />
 
-        <div className="rounded-md border border-line bg-bg1 px-4 py-3">
-          <div className="flex items-center justify-between text-2xs text-ink-faint">
-            <span>ONLINE AGORA</span>
-            <Activity className="h-3.5 w-3.5 text-ok" strokeWidth={1.75} />
-          </div>
-          <div className="mt-1 font-mono text-2xl font-medium tabular-nums text-ok">
-            {formatNumber(currentStats?.onlinePlayers || 0)}
-          </div>
-          <div className="mt-0.5 flex items-center justify-between text-2xs text-ink-dim">
-            <span>Sessões ativas</span>
+        <MetricCard
+          label="ONLINE AGORA"
+          value={formatNumber(currentStats?.onlinePlayers || 0)}
+          icon={Activity}
+          iconClassName="text-ok"
+          valueClassName="text-ok"
+          footerLeft="Sessões ativas"
+          footerRight={
             <span className="font-mono text-ink">
-              {currentStats?.trends?.onlineTrend || '+0%'} vs 1h
+              {currentStats?.trends?.onlineTrend || '0%'} vs 1h
             </span>
-          </div>
-        </div>
+          }
+        />
 
-        <div className="rounded-md border border-line bg-bg1 px-4 py-3">
-          <div className="flex items-center justify-between text-2xs text-ink-faint">
-            <span>LIQUIDEZ EM CIRCULAÇÃO</span>
-            <DollarSign className="h-3.5 w-3.5 text-brass" strokeWidth={1.75} />
-          </div>
-          <div className="mt-1 font-mono text-2xl font-medium tabular-nums text-brass">
-            {formatCurrency(currentStats?.economicSnapshot?.moneyInCirc || 0)}
-          </div>
-          <div className="mt-0.5 flex items-center justify-between text-2xs text-ink-dim">
-            <span>Snapshot monetário</span>
+        <MetricCard
+          label="LIQUIDEZ EM CIRCULAÇÃO"
+          value={formatCurrency(currentStats?.economicSnapshot?.moneyInCirc || 0)}
+          icon={DollarSign}
+          iconClassName="text-brass"
+          valueClassName="text-brass"
+          footerLeft="Snapshot monetário"
+          footerRight={
             <span className="font-mono text-ink-faint">
               Média {formatCurrency(currentStats?.economicSnapshot?.avgPlayerWealth || 0)}
             </span>
-          </div>
-        </div>
+          }
+        />
 
-        <div className="rounded-md border border-line bg-bg1 px-4 py-3">
-          <div className="flex items-center justify-between text-2xs text-ink-faint">
-            <span>VOLUME LOJAS & RACHAS (24H)</span>
-            <Flag className="h-3.5 w-3.5 text-signal" strokeWidth={1.75} />
-          </div>
-          <div className="mt-1 font-mono text-2xl font-medium tabular-nums text-ink">
-            {formatCurrency(resourcesData?.stats?.totalRevenue || 0)}
-          </div>
-          <div className="mt-0.5 flex items-center justify-between text-2xs text-ink-dim">
-            <span>
+        <MetricCard
+          label="VOLUME LOJAS & RACHAS (24H)"
+          value={formatCurrency(resourcesData?.stats?.totalRevenue || 0)}
+          icon={Flag}
+          iconClassName="text-signal"
+          footerLeft={
+            <>
               Rachas:{' '}
               <span className="font-mono text-brass">
                 {formatCurrency(resourcesData?.stats?.raceVolume || 0)}
               </span>
-            </span>
-            {Number(currentStats?.riskAlerts) > 0 && (
+            </>
+          }
+          footerRight={
+            riskAlertsCount > 0 ? (
               <span className="flex items-center gap-1 font-mono text-signal">
-                <ShieldAlert className="h-3 w-3" /> {currentStats.riskAlerts} alerta(s)
+                <ShieldAlert className="h-3 w-3" /> {riskAlertsCount} alerta(s)
               </span>
-            )}
-          </div>
-        </div>
+            ) : null
+          }
+        />
       </div>
 
       <Tabs defaultValue="overview" className="space-y-3">
@@ -199,7 +200,7 @@ export default function Dashboard() {
                 </Badge>
               </CardHeader>
               <CardContent>
-                <Overview data={overviewData || []} />
+                <EconomyOverviewChart data={overviewData} />
               </CardContent>
             </Card>
 

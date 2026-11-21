@@ -7,14 +7,15 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency } from '@/lib/formatters';
+import { OverviewDayPoint } from '@/types/telemetry';
 
 const C_BRASS = '#C8A455';
 const C_SIGNAL = '#D9482F';
 const C_DIM = '#A29F94';
 const C_LINE = '#2C2E33';
 
-export function Overview({ data }: { data: any[] }) {
+export function EconomyOverviewChart({ data }: { data: OverviewDayPoint[] }) {
   if (!data || data.length === 0) {
     return (
       <div className="flex h-[320px] items-center justify-center text-xs text-ink-dim">
@@ -41,15 +42,15 @@ export function Overview({ data }: { data: any[] }) {
               fontSize={11}
               tickLine={false}
               axisLine={false}
-              tickFormatter={(value) =>
+              tickFormatter={(value: number) =>
                 value >= 1000 ? `R$${Math.round(value / 1000)}k` : `R$${value}`
               }
             />
             <Tooltip
               cursor={{ fill: 'rgba(255,255,255,0.03)' }}
-              formatter={(val: number, name: string) => [
+              formatter={(val, name) => [
                 formatCurrency(Number(val) || 0),
-                name,
+                String(name),
               ]}
               contentStyle={{
                 backgroundColor: '#16171A',
@@ -76,8 +77,8 @@ export function Overview({ data }: { data: any[] }) {
         </ResponsiveContainer>
       </div>
 
-      <div className="flex items-center justify-between border-t border-line pt-2.5 text-2xs text-ink-dim">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line pt-2.5 text-2xs text-ink-dim">
+        <div className="flex flex-wrap items-center gap-4">
           <span className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-sm bg-brass" /> Entradas (Empregos, Prêmios, Bancos)
           </span>

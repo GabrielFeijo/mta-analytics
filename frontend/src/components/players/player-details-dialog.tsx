@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query';
 import {
   Dialog,
   DialogContent,
@@ -5,48 +6,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { useQuery } from '@tanstack/react-query';
-import { analyticsApi, playersApi } from '@/lib/api';
 import { Badge } from '@/components/ui/badge';
-import { Player } from '@/lib/types';
-import { formatCurrency, formatPlaytimeHours, formatTime } from '@/lib/utils';
+import { TelemetryMeter } from './telemetry-meter';
+import { analyticsApi } from '@/services/analytics-api';
+import { playersApi } from '@/services/players-api';
+import { Player, PlayerActivityEvent } from '@/types/telemetry';
+import { formatCurrency, formatPlaytimeHours, formatTime } from '@/lib/formatters';
 
 interface PlayerDetailsDialogProps {
   playerId: number | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-}
-
-function TelemetryMeter({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: number;
-  tone?: 'ok' | 'warn' | 'signal';
-}) {
-  const pct = Math.max(0, Math.min(100, Math.round(value)));
-  const resolvedTone =
-    tone || (pct <= 25 ? 'signal' : pct <= 55 ? 'warn' : 'ok');
-  const barColor =
-    resolvedTone === 'signal'
-      ? 'bg-signal'
-      : resolvedTone === 'warn'
-        ? 'bg-warn'
-        : 'bg-ok';
-
-  return (
-    <div className="flex items-center gap-3">
-      <span className="w-16 shrink-0 text-2xs text-ink-dim">{label}</span>
-      <div className="h-[3px] flex-1 overflow-hidden rounded-full bg-line">
-        <div className={`h-full ${barColor}`} style={{ width: `${pct}%` }} />
-      </div>
-      <span className="w-9 shrink-0 text-right font-mono text-2xs tabular-nums text-ink">
-        {pct}%
-      </span>
-    </div>
-  );
 }
 
 export function PlayerDetailsDialog({
@@ -60,7 +30,7 @@ export function PlayerDetailsDialog({
     enabled: Boolean(playerId) && open,
   });
 
-  const { data: activity = [] } = useQuery<any[]>({
+  const { data: activity = [] } = useQuery<PlayerActivityEvent[]>({
     queryKey: ['player-activity', playerId],
     queryFn: () => analyticsApi.getPlayerActivity(playerId!, 24),
     enabled: Boolean(playerId) && open,
@@ -92,7 +62,7 @@ export function PlayerDetailsDialog({
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <h3 className="truncate text-sm font-semibold text-ink">
-                      {player.lastUsername}
+                      {player.lastUsername || 'Desconhecido'}
                     </h3>
                     <Badge variant="brass" className="font-mono">
                       ID #{player.characterId || player.id}
@@ -115,6 +85,11 @@ export function PlayerDetailsDialog({
                 <div className="mt-0.5 font-mono text-[13px] font-medium tabular-nums text-ok">
                   {formatCurrency(player.money || 0)}
                 </div>
+                {(player.dirtyMoney ?? 0) > 0 && (
+                  <div className="mt-0.5 font-mono text-[10px] text-warn">
+                    {formatCurrency(player.dirtyMoney || 0)} sujo
+                  </div>
+                )}
               </div>
               <div className="rounded-sm border border-line bg-bg2 p-2.5">
                 <div className="text-2xs text-ink-faint">Saldo Bancário</div>
@@ -190,28 +165,33 @@ export function PlayerDetailsDialog({
                     Nenhuma atividade registrada nesta janela.
                   </div>
                 ) : (
-                  activity.map((ev: any, idx: number) => (
-                    <div
-                      key={ev.id || idx}
-                      className="flex items-center justify-between gap-2 border-b border-line/50 pb-1.5 text-xs last:border-b-0 last:pb-0"
-                    >
-                      <div className="min-w-0">
-                        <span className="font-mono text-2xs text-brass">
-                          [{ev.eventType}]
-                        </span>{' '}
-                        <span className="text-ink-dim">
-                          {ev.data?.description ||
-                            ev.data?.vehicleName ||
-                            (ev.positionX !== undefined
-                              ? `Posição X:${Math.round(ev.positionX)} Y:${Math.round(ev.positionY)}`
-                              : 'Evento registrado')}
+                  activity.map((ev, idx) => {
+                    const desc = ev.data?.description;
+                    const vehicle = ev.data?.vehicleName;
+                    const label =
+                      (typeof desc === 'string' && desc) ||
+                      (typeof vehicle === 'string' && vehicle) ||
+                      (ev.positionX !== undefined && ev.positionX !== null
+                        ? `Posição X:${Math.round(ev.positionX)} Y:${Math.round(ev.positionY ?? 0)}`
+                        : 'Evento registrado');
+
+                    return (
+                      <div
+                        key={ev.id || idx}
+                        className="flex items-center justify-between gap-2 border-b border-line/50 pb-1.5 text-xs last:border-b-0 last:pb-0"
+                      >
+                        <div className="min-w-0">
+                          <span className="font-mono text-2xs text-brass">
+                            [{ev.eventType}]
+                          </span>{' '}
+                          <span className="text-ink-dim">{label}</span>
+                        </div>
+                        <span className="shrink-0 font-mono text-2xs tabular-nums text-ink-faint">
+                          {formatTime(ev.timestamp)}
                         </span>
                       </div>
-                      <span className="shrink-0 font-mono text-2xs tabular-nums text-ink-faint">
-                        {formatTime(ev.timestamp)}
-                      </span>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>

@@ -1,33 +1,48 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Search, Users } from 'lucide-react';
-import { playersApi } from '@/lib/api';
+import { playersApi } from '@/services/players-api';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { PlayerTable } from '@/components/players/PlayerTable';
-import { PlayerDetailsDialog } from '@/components/players/PlayerDetailsDialog';
-import { Player } from '@/lib/types';
+import { PlayerTable } from '@/components/players/player-table';
+import { PlayerDetailsDialog } from '@/components/players/player-details-dialog';
+import { QueryErrorState } from '@/components/common/query-error-state';
+import { Player } from '@/types/telemetry';
 
 export default function Players() {
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedQuery = useDebouncedValue(searchQuery.trim(), 300);
   const [selectedPlayerId, setSelectedPlayerId] = useState<number | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
 
-  const { data: onlinePlayers = [], isLoading } = useQuery({
+  const isSearching = debouncedQuery.length > 1;
+
+  const {
+    data: onlinePlayers = [],
+    isLoading,
+    isError: isOnlineError,
+    refetch: refetchOnline,
+  } = useQuery({
     queryKey: ['online-players'],
     queryFn: playersApi.getOnlinePlayers,
     refetchInterval: 10000,
   });
 
-  const { data: searchResults = [] } = useQuery({
-    queryKey: ['search-players', searchQuery],
-    queryFn: () => playersApi.searchPlayers(searchQuery),
-    enabled: searchQuery.trim().length > 1,
+  const {
+    data: searchResults = [],
+    isFetching: isSearchFetching,
+    isError: isSearchError,
+    refetch: refetchSearch,
+  } = useQuery({
+    queryKey: ['search-players', debouncedQuery],
+    queryFn: () => playersApi.searchPlayers(debouncedQuery),
+    enabled: isSearching,
   });
 
-  const displayPlayers =
-    searchQuery.trim().length > 1 ? searchResults : onlinePlayers;
+  const displayPlayers = isSearching ? searchResults : onlinePlayers;
+  const activeError = isSearching ? isSearchError : isOnlineError;
 
   const handleViewPlayer = (player: Player) => {
     setSelectedPlayerId(player.id);
@@ -56,7 +71,7 @@ export default function Players() {
               />
               <Input
                 type="text"
-                placeholder="Filtrar por nome, serial ou ocupação…"
+                placeholder="Filtrar por nome, serial, cargo ou facção…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-8"
@@ -70,7 +85,14 @@ export default function Players() {
         </CardHeader>
 
         <CardContent className="p-0">
-          {isLoading ? (
+          {activeError ? (
+            <div className="p-4">
+              <QueryErrorState
+                message="Não foi possível sincronizar a lista de pilotos."
+                onRetry={() => void (isSearching ? refetchSearch() : refetchOnline())}
+              />
+            </div>
+          ) : isLoading || (isSearching && isSearchFetching) ? (
             <div className="py-12 text-center text-xs text-ink-dim">
               Sincronizando lista de jogadores…
             </div>

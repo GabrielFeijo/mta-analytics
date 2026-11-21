@@ -1,10 +1,14 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ShoppingCart, Car, Flag } from 'lucide-react';
-import { analyticsApi } from '@/lib/api';
-import { formatCurrency, formatTime } from '@/lib/utils';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Car, Flag, ShoppingCart } from 'lucide-react';
+import { analyticsApi } from '@/services/analytics-api';
+import { formatCurrency, formatTime } from '@/lib/formatters';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { TransactionTable } from '@/components/economy/TransactionTable';
+import { MetricCard } from '@/components/dashboard/metric-card';
+import { TimeWindowSelector } from '@/components/common/time-window-selector';
+import { QueryErrorState } from '@/components/common/query-error-state';
+import { TransactionTable } from '@/components/economy/transaction-table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Table,
@@ -16,11 +20,22 @@ import {
 } from '@/components/ui/table';
 
 export default function Resources() {
-  const { data, isLoading } = useQuery({
-    queryKey: ['resources-stats'],
-    queryFn: () => analyticsApi.getResourcesStats(24),
+  const [windowHours, setWindowHours] = useState<number>(24);
+
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ['resources-stats', windowHours],
+    queryFn: () => analyticsApi.getResourcesStats(windowHours),
     refetchInterval: 30000,
   });
+
+  if (isError) {
+    return (
+      <QueryErrorState
+        message="Erro ao carregar telemetria de recursos, lojas e corridas."
+        onRetry={() => void refetch()}
+      />
+    );
+  }
 
   const stats = data?.stats || {
     totalRevenue: 0,
@@ -39,48 +54,42 @@ export default function Resources() {
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-2xs uppercase tracking-wider text-ink-faint">
+          Janela de Telemetria
+        </span>
+        <TimeWindowSelector value={windowHours} onChange={setWindowHours} />
+      </div>
+
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-        <div className="rounded-md border border-line bg-bg1 px-4 py-3">
-          <div className="flex items-center justify-between text-2xs text-ink-faint">
-            <span>CORRIDAS & APOSTAS (MTA_RACING)</span>
-            <Flag className="h-3.5 w-3.5 text-signal" strokeWidth={1.75} />
-          </div>
-          <div className="mt-1 font-mono text-2xl font-medium tabular-nums text-brass">
-            {formatCurrency(stats.raceVolume || 0)}
-          </div>
-          <div className="mt-0.5 flex items-center justify-between text-2xs text-ink-dim">
-            <span>Inscrições, prêmios e apostas</span>
-            <span className="font-mono text-ink">{stats.raceCount || 0} operações</span>
-          </div>
-        </div>
+        <MetricCard
+          label="CORRIDAS & APOSTAS (MTA_RACING)"
+          value={formatCurrency(stats.raceVolume || 0)}
+          icon={Flag}
+          iconClassName="text-signal"
+          valueClassName="text-brass"
+          footerLeft="Inscrições, prêmios e apostas"
+          footerRight={<span className="font-mono text-ink">{stats.raceCount || 0} operações</span>}
+        />
 
-        <div className="rounded-md border border-line bg-bg1 px-4 py-3">
-          <div className="flex items-center justify-between text-2xs text-ink-faint">
-            <span>CONCESSIONÁRIAS (VEÍCULOS)</span>
-            <Car className="h-3.5 w-3.5 text-brass" strokeWidth={1.75} />
-          </div>
-          <div className="mt-1 font-mono text-2xl font-medium tabular-nums text-ink">
-            {formatCurrency(stats.vehicleRevenue || 0)}
-          </div>
-          <div className="mt-0.5 flex items-center justify-between text-2xs text-ink-dim">
-            <span>Aquisições na spc_carshop</span>
+        <MetricCard
+          label="CONCESSIONÁRIAS (VEÍCULOS)"
+          value={formatCurrency(stats.vehicleRevenue || 0)}
+          icon={Car}
+          iconClassName="text-brass"
+          footerLeft="Aquisições na spc_carshop"
+          footerRight={
             <span className="font-mono text-brass">{stats.vehicleCount || 0} veículos</span>
-          </div>
-        </div>
+          }
+        />
 
-        <div className="rounded-md border border-line bg-bg1 px-4 py-3">
-          <div className="flex items-center justify-between text-2xs text-ink-faint">
-            <span>LOJAS, OFICINAS & POSTOS</span>
-            <ShoppingCart className="h-3.5 w-3.5 text-ink-dim" strokeWidth={1.75} />
-          </div>
-          <div className="mt-1 font-mono text-2xl font-medium tabular-nums text-ink">
-            {formatCurrency(stats.shopRevenue || 0)}
-          </div>
-          <div className="mt-0.5 flex items-center justify-between text-2xs text-ink-dim">
-            <span>Consumo de itens e serviços</span>
-            <span className="font-mono text-ink">{stats.shopCount || 0} vendas</span>
-          </div>
-        </div>
+        <MetricCard
+          label="LOJAS, OFICINAS & POSTOS"
+          value={formatCurrency(stats.shopRevenue || 0)}
+          icon={ShoppingCart}
+          footerLeft="Consumo de itens e serviços"
+          footerRight={<span className="font-mono text-ink">{stats.shopCount || 0} vendas</span>}
+        />
       </div>
 
       <Tabs defaultValue="racing" className="space-y-3">
@@ -114,7 +123,7 @@ export default function Resources() {
                 <div className="py-10 text-center text-xs text-ink-dim">Carregando…</div>
               ) : raceActivity.length === 0 ? (
                 <div className="py-10 text-center text-xs text-ink-dim">
-                  Nenhuma movimentação de corrida registrada nas últimas 24h.
+                  Nenhuma movimentação de corrida registrada neste período.
                 </div>
               ) : (
                 <Table>
@@ -129,7 +138,7 @@ export default function Resources() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {raceActivity.map((item: any, idx: number) => {
+                    {raceActivity.map((item, idx) => {
                       const isEarn = item.type === 'EARN';
                       return (
                         <TableRow key={item.id || idx}>
@@ -185,7 +194,7 @@ export default function Resources() {
                 <div className="py-10 text-center text-xs text-ink-dim">Carregando…</div>
               ) : (
                 <TransactionTable
-                  transactions={vehiclePurchases.map((tx: any) => ({
+                  transactions={vehiclePurchases.map((tx) => ({
                     id: tx.id,
                     type: 'SPEND',
                     amount: tx.amount,
@@ -214,7 +223,7 @@ export default function Resources() {
                 <div className="py-10 text-center text-xs text-ink-dim">Carregando…</div>
               ) : (
                 <TransactionTable
-                  transactions={shopPurchases.map((tx: any) => ({
+                  transactions={shopPurchases.map((tx) => ({
                     id: tx.id,
                     type: 'SPEND',
                     amount: tx.amount,

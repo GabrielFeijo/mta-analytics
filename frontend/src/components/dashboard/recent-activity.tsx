@@ -1,5 +1,6 @@
 import { Badge } from '@/components/ui/badge';
-import { formatCurrency, formatTime } from '@/lib/utils';
+import { formatCurrency, formatTime } from '@/lib/formatters';
+import { RecentEvent } from '@/types/telemetry';
 
 const EVENT_META: Record<
   string,
@@ -19,7 +20,7 @@ const EVENT_META: Record<
   player_status_sync: { label: 'TELEMETRIA', variant: 'secondary' },
 };
 
-export function RecentActivity({ events }: { events: any[] }) {
+export function RecentActivity({ events }: { events: RecentEvent[] }) {
   if (!events || events.length === 0) {
     return (
       <div className="py-10 text-center text-xs text-ink-dim">
@@ -36,9 +37,10 @@ export function RecentActivity({ events }: { events: any[] }) {
           variant: 'secondary' as const,
         };
         const username = event.player?.lastUsername || event.playerName || 'Jogador';
-        const amount =
-          event.data?.amount ?? event.data?.price ?? undefined;
-        const sourceRes = event.data?.source_resource;
+        const data = event.data || {};
+        const rawAmount = data.amount ?? data.price;
+        const amount = rawAmount !== undefined && rawAmount !== null ? Number(rawAmount) : undefined;
+        const sourceRes = typeof data.source_resource === 'string' ? data.source_resource : undefined;
 
         return (
           <div
@@ -60,13 +62,13 @@ export function RecentActivity({ events }: { events: any[] }) {
                   {sourceRes && (
                     <span className="font-mono text-ink-faint">[{sourceRes}]</span>
                   )}
-                  {amount !== undefined ? (
+                  {amount !== undefined && Number.isFinite(amount) ? (
                     <span className="font-mono tabular-nums text-brass">
-                      {formatCurrency(Number(amount))}
+                      {formatCurrency(amount)}
                     </span>
                   ) : event.positionX !== undefined && event.positionX !== null ? (
                     <span className="font-mono tabular-nums text-ink-faint">
-                      X:{Math.round(event.positionX)} Y:{Math.round(event.positionY)}
+                      X:{Math.round(event.positionX)} Y:{Math.round(event.positionY ?? 0)}
                     </span>
                   ) : (
                     <span>Telemetria registrada</span>
