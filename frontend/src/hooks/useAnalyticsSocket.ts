@@ -34,7 +34,7 @@ export function useAnalyticsSocket(): UseAnalyticsSocketReturn {
             setIsConnected(true);
         });
 
-        socketInstance.on('disconnect', (reason) => {
+        socketInstance.on('disconnect', () => {
             setIsConnected(false);
         });
 
