@@ -9,9 +9,13 @@ addEventHandler("onPlayerJoin", root, function()
 end)
 
 addEventHandler("onPlayerQuit", root, function(quitType, reason)
+    if MtaAnalyticsCombat and MtaAnalyticsCombat.flushForPlayer then
+        MtaAnalyticsCombat.flushForPlayer(source)
+    end
     if not Config.Collectors.PLAYER_QUIT then
         return
     end
+
     local snapshot = MtaAnalyticsUtils.buildPlayerSnapshot(source)
     snapshot.quitType = tostring(quitType or "Unknown")
     snapshot.reason = reason and tostring(reason) or nil
@@ -28,9 +32,13 @@ addEventHandler("onPlayerSpawn", root, function()
 end)
 
 addEventHandler("onPlayerWasted", root, function(_, killer, killerWeapon, bodypart)
+    if MtaAnalyticsCombat and MtaAnalyticsCombat.flushForPlayer then
+        MtaAnalyticsCombat.flushForPlayer(source)
+    end
     if not Config.Collectors.PLAYER_WASTED then
         return
     end
+
     local killerName = "Ambiente"
     local killerSerial = nil
     if MtaAnalyticsUtils.isValidPlayer(killer) then

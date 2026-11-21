@@ -18,7 +18,29 @@ function logTransaction(player, transType, amount, description)
         source_resource = callerName,
         money = snapshot.money,
         bank = snapshot.bank,
+        dirtyMoney = snapshot.dirtyMoney,
         id = snapshot.id,
+    })
+
+    return MtaAnalyticsQueue.add(event)
+end
+
+function logMoneyChange(player, amount, newBalance, changeSource)
+    if not MtaAnalyticsUtils.isValidPlayer(player) then
+        return false
+    end
+
+    local numericAmount = tonumber(amount)
+    if not numericAmount or numericAmount == 0 then
+        return false
+    end
+
+    local callerName = sourceResource and getResourceName(sourceResource) or "unknown"
+    local event = MtaAnalyticsUtils.buildPlayerEvent("player_money_change", player, {
+        amount = numericAmount,
+        newBalance = tonumber(newBalance) or 0,
+        source = tostring(changeSource or callerName),
+        source_resource = callerName,
     })
 
     return MtaAnalyticsQueue.add(event)

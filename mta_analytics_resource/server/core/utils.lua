@@ -8,12 +8,19 @@ function MtaAnalyticsUtils.stripHex(text)
 end
 
 function MtaAnalyticsUtils.encodeJsonObject(payload)
+    if type(payload) ~= "table" or next(payload) == nil then
+        return "{}"
+    end
     local serialized = toJSON(payload, true)
     if type(serialized) ~= "string" or serialized == "" then
         return "{}"
     end
     if serialized:sub(1, 1) == "[" and serialized:sub(-1) == "]" then
-        return serialized:sub(2, -2)
+        local unwrapped = serialized:sub(2, -2)
+        if unwrapped == "" or unwrapped == "[]" then
+            return "{}"
+        end
+        return unwrapped
     end
     return serialized
 end
@@ -65,8 +72,10 @@ function MtaAnalyticsUtils.buildPlayerEvent(eventType, player, data)
     if not MtaAnalyticsUtils.isValidPlayer(player) then
         return nil
     end
+
     local x, y, z = getElementPosition(player)
-    local cleanName = MtaAnalyticsUtils.stripHex(getPlayerName(player) or "Unknown")
+    local rawName = getPlayerName(player) or "Unknown"
+    local cleanName = MtaAnalyticsUtils.stripHex(rawName)
     local charId = tonumber(MtaAnalyticsUtils.safeElementData(player, Config.ElementDataKeys.charId, nil))
 
     local payloadData = {}
@@ -78,11 +87,15 @@ function MtaAnalyticsUtils.buildPlayerEvent(eventType, player, data)
     if charId and payloadData.id == nil then
         payloadData.id = charId
     end
+    -- Garante ao menos uma chave para que toJSON não serialize tabela vazia como []
+    if next(payloadData) == nil then
+        payloadData.source = "mta"
+    end
 
     return {
         eventType = tostring(eventType),
         playerSerial = getPlayerSerial(player) or "UNKNOWN_SERIAL",
-        playerName = cleanName ~= "" and cleanName or (getPlayerName(player) or "Unknown"),
+        playerName = cleanName ~= "" and cleanName or rawName,
         position = {
             x = MtaAnalyticsUtils.roundCoord(x),
             y = MtaAnalyticsUtils.roundCoord(y),
@@ -98,5 +111,3 @@ function MtaAnalyticsUtils.debugLog(message)
         outputDebugString("[mta_analytics_resource] " .. tostring(message), 3)
     end
 end
-
-createPlayerEvent = MtaAnalyticsUtils.buildPlayerEvent

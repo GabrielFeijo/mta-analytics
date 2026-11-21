@@ -1,23 +1,25 @@
 local heartbeatTimer = nil
 local positionTimer = nil
 local statusSyncTimer = nil
+local bootTimer = nil
 
 local function samplePlayerPositions()
     if not Config.Collectors.PLAYER_POSITION then
         return
     end
     for _, player in ipairs(getElementsByType("player")) do
-        local x, y, z = getElementPosition(player)
         local event = MtaAnalyticsUtils.buildPlayerEvent("player_position", player, {
-            position = {
-                x = MtaAnalyticsUtils.roundCoord(x),
-                y = MtaAnalyticsUtils.roundCoord(y),
-                z = MtaAnalyticsUtils.roundCoord(z),
-            },
             dimension = getElementDimension(player),
             interior = getElementInterior(player),
+            inVehicle = isPedInVehicle(player),
         })
         MtaAnalyticsQueue.add(event)
+    end
+end
+
+local function safeKillTimer(timerHandle)
+    if timerHandle and isTimer(timerHandle) then
+        killTimer(timerHandle)
     end
 end
 
@@ -34,23 +36,27 @@ addEventHandler("onResourceStart", resourceRoot, function()
         MtaAnalyticsPlayerDetails.syncAll()
     end, Config.Intervals.statusSyncMs or 60000, 0)
 
-    setTimer(function()
+    bootTimer = setTimer(function()
+        bootTimer = nil
         MtaAnalyticsRequest.sendHeartbeat()
         MtaAnalyticsPlayerDetails.syncAll()
     end, 2500, 1)
 
-    MtaAnalyticsUtils.debugLog("Coletor iniciado -> " .. tostring(Config.API.url))
+    MtaAnalyticsUtils.debugLog("Coletor server-only iniciado -> " .. tostring(Config.API.url))
 end)
 
 addEventHandler("onResourceStop", resourceRoot, function()
-    if heartbeatTimer and isTimer(heartbeatTimer) then
-        killTimer(heartbeatTimer)
-    end
-    if positionTimer and isTimer(positionTimer) then
-        killTimer(positionTimer)
-    end
-    if statusSyncTimer and isTimer(statusSyncTimer) then
-        killTimer(statusSyncTimer)
+    safeKillTimer(bootTimer)
+    safeKillTimer(heartbeatTimer)
+    safeKillTimer(positionTimer)
+    safeKillTimer(statusSyncTimer)
+    bootTimer = nil
+    heartbeatTimer = nil
+    positionTimer = nil
+    statusSyncTimer = nil
+
+    if MtaAnalyticsCombat and MtaAnalyticsCombat.flushAll then
+        MtaAnalyticsCombat.flushAll()
     end
 
     MtaAnalyticsQueue.stopTimer()

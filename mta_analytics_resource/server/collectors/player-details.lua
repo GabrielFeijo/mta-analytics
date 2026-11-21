@@ -18,12 +18,11 @@ end
 addEventHandler("onPlayerLogin", root, function()
     local loggedPlayer = source
     setTimer(function()
-        if MtaAnalyticsUtils.isValidPlayer(loggedPlayer) then
-            local snapshot = MtaAnalyticsUtils.buildPlayerSnapshot(loggedPlayer)
-            local event = MtaAnalyticsUtils.buildPlayerEvent("initial_player_sync", loggedPlayer, snapshot)
-            MtaAnalyticsQueue.add(event)
+        if not MtaAnalyticsUtils.isValidPlayer(loggedPlayer) then
+            return
         end
+        local snapshot = MtaAnalyticsUtils.buildPlayerSnapshot(loggedPlayer)
+        local event = MtaAnalyticsUtils.buildPlayerEvent("initial_player_sync", loggedPlayer, snapshot)
+        MtaAnalyticsQueue.add(event)
     end, 5000, 1)
 end)
-
-syncPlayerDetails = MtaAnalyticsPlayerDetails.syncAll

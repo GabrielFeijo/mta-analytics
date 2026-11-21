@@ -12,6 +12,13 @@ local function trimBufferIfNeeded()
     end
 end
 
+function MtaAnalyticsQueue.recordDropped(count)
+    local amount = tonumber(count) or 0
+    if amount > 0 then
+        MtaAnalyticsQueue.totalDropped = MtaAnalyticsQueue.totalDropped + amount
+    end
+end
+
 function MtaAnalyticsQueue.add(event)
     if type(event) ~= "table" or not event.eventType then
         return false
@@ -26,7 +33,7 @@ function MtaAnalyticsQueue.add(event)
     )
 
     if #MtaAnalyticsQueue.events >= (Config.Queue.batchSize or 15) then
-        MtaAnalyticsQueue.flush()
+        MtaAnalyticsQueue.flush(false)
     end
     return true
 end
@@ -45,16 +52,16 @@ function MtaAnalyticsQueue.flush(forceFlush)
     if #MtaAnalyticsQueue.events == 0 then
         return false
     end
-    if not forceFlush and MtaAnalyticsRequest and MtaAnalyticsRequest.isCircuitOpen() then
+    if MtaAnalyticsRequest and not MtaAnalyticsRequest.canDispatch(forceFlush) then
         return false
     end
 
-    local batchSize = math.min(#MtaAnalyticsQueue.events, (Config.Queue.batchSize or 15) * 4)
+    local batchLimit = math.min(#MtaAnalyticsQueue.events, (Config.Queue.batchSize or 15) * 4)
     local batch = {}
-    for i = 1, batchSize do
+    for i = 1, batchLimit do
         batch[i] = MtaAnalyticsQueue.events[i]
     end
-    for _ = 1, batchSize do
+    for _ = 1, batchLimit do
         table.remove(MtaAnalyticsQueue.events, 1)
     end
 
@@ -77,12 +84,13 @@ function MtaAnalyticsQueue.stopTimer()
 end
 
 function MtaAnalyticsQueue.getStatus()
+    local reqStatus = MtaAnalyticsRequest and MtaAnalyticsRequest.getStatus and MtaAnalyticsRequest.getStatus() or {}
     return {
         pending = #MtaAnalyticsQueue.events,
         totalQueued = MtaAnalyticsQueue.totalQueued,
         totalDropped = MtaAnalyticsQueue.totalDropped,
         circuitOpen = MtaAnalyticsRequest and MtaAnalyticsRequest.isCircuitOpen() or false,
+        circuitState = reqStatus.state or "CLOSED",
+        inFlight = reqStatus.inFlight or 0,
     }
 end
-
-EventQueue = MtaAnalyticsQueue
