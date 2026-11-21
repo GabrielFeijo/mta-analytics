@@ -1,71 +1,90 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Search } from 'lucide-react';
+import { Search, Users } from 'lucide-react';
 import { playersApi } from '@/lib/api';
-import { Input } from "@/components/ui/input"
-import { PlayerTable } from "@/components/players/PlayerTable"
-import { PlayerDetailsDialog } from "@/components/players/PlayerDetailsDialog"
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { PlayerTable } from '@/components/players/PlayerTable';
+import { PlayerDetailsDialog } from '@/components/players/PlayerDetailsDialog';
 import { Player } from '@/lib/types';
 
 export default function Players() {
-    const [searchQuery, setSearchQuery] = useState('');
-    const [selectedPlayerId, setSelectedPlayerId] = useState<number | null>(null);
-    const [detailsOpen, setDetailsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedPlayerId, setSelectedPlayerId] = useState<number | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
-    const { data: onlinePlayers, isLoading } = useQuery({
-        queryKey: ['online-players'],
-        queryFn: playersApi.getOnlinePlayers,
-        refetchInterval: 10000,
-    });
+  const { data: onlinePlayers = [], isLoading } = useQuery({
+    queryKey: ['online-players'],
+    queryFn: playersApi.getOnlinePlayers,
+    refetchInterval: 10000,
+  });
 
-    const { data: searchResults } = useQuery({
-        queryKey: ['search-players', searchQuery],
-        queryFn: () => playersApi.searchPlayers(searchQuery),
-        enabled: searchQuery.length > 2,
-    });
+  const { data: searchResults = [] } = useQuery({
+    queryKey: ['search-players', searchQuery],
+    queryFn: () => playersApi.searchPlayers(searchQuery),
+    enabled: searchQuery.trim().length > 1,
+  });
 
-    const displayPlayers = searchQuery.length > 2 ? searchResults : onlinePlayers;
+  const displayPlayers =
+    searchQuery.trim().length > 1 ? searchResults : onlinePlayers;
 
-    const handleViewPlayer = (player: Player) => {
-        setSelectedPlayerId(player.id);
-        setDetailsOpen(true);
-    };
+  const handleViewPlayer = (player: Player) => {
+    setSelectedPlayerId(player.id);
+    setDetailsOpen(true);
+  };
 
-    return (
-        <div className="flex-1 space-y-4 p-8 pt-6">
-            <div className="flex items-center justify-between space-y-2">
-                <div>
-                    <h2 className="text-3xl font-bold tracking-tight">Jogadores</h2>
-                    <p className="text-muted-foreground">
-                        Gerencie e monitore a atividade dos jogadores
-                    </p>
-                </div>
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-brass" strokeWidth={1.75} />
+              Monitoramento de Pilotos & Sessões
+            </CardTitle>
+            <CardDescription>
+              Auditoria de patrimônio, ocupação, serial MTA e score de anomalia.
+            </CardDescription>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="relative w-64 sm:w-80">
+              <Search
+                className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-faint"
+                strokeWidth={1.75}
+              />
+              <Input
+                type="text"
+                placeholder="Filtrar por nome, serial ou ocupação…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8"
+              />
             </div>
 
-            <div className="flex items-center space-x-2">
-                <Search className="w-5 h-5 text-muted-foreground" />
-                <Input
-                    type="text"
-                    placeholder="Buscar jogadores por nome ou serial..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="max-w-sm"
-                />
-            </div>
+            <Badge variant="ok" className="font-mono">
+              {displayPlayers.length} listado(s)
+            </Badge>
+          </div>
+        </CardHeader>
 
-            <div className="rounded-md border">
-                {isLoading ? (
-                    <div className="p-8 text-center text-muted-foreground">Carregando jogadores...</div>
-                ) : (
-                    <PlayerTable players={displayPlayers || []} onViewPlayer={handleViewPlayer} />
-                )}
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="py-12 text-center text-xs text-ink-dim">
+              Sincronizando lista de jogadores…
             </div>
+          ) : (
+            <PlayerTable players={displayPlayers} onViewPlayer={handleViewPlayer} />
+          )}
+        </CardContent>
+      </Card>
 
-            <PlayerDetailsDialog
-                playerId={selectedPlayerId}
-                open={detailsOpen}
-                onOpenChange={setDetailsOpen}
-            />
-        </div>
-    );
+      <PlayerDetailsDialog
+        playerId={selectedPlayerId}
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
+      />
+    </div>
+  );
 }

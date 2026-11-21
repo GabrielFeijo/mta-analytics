@@ -1,113 +1,227 @@
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog"
-import { useQuery } from "@tanstack/react-query"
-import { playersApi } from "@/lib/api"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Player } from "@/lib/types"
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { useQuery } from '@tanstack/react-query';
+import { analyticsApi, playersApi } from '@/lib/api';
+import { Badge } from '@/components/ui/badge';
+import { Player } from '@/lib/types';
+import { formatCurrency, formatPlaytimeHours, formatTime } from '@/lib/utils';
 
 interface PlayerDetailsDialogProps {
-    playerId: number | null
-    open: boolean
-    onOpenChange: (open: boolean) => void
+  playerId: number | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
-export function PlayerDetailsDialog({ playerId, open, onOpenChange }: PlayerDetailsDialogProps) {
-    const { data: player, isLoading } = useQuery<Player>({
-        queryKey: ['player', playerId],
-        queryFn: () => playersApi.getPlayer(playerId!),
-        enabled: !!playerId && open,
-    });
+function TelemetryMeter({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone?: 'ok' | 'warn' | 'signal';
+}) {
+  const pct = Math.max(0, Math.min(100, Math.round(value)));
+  const resolvedTone =
+    tone || (pct <= 25 ? 'signal' : pct <= 55 ? 'warn' : 'ok');
+  const barColor =
+    resolvedTone === 'signal'
+      ? 'bg-signal'
+      : resolvedTone === 'warn'
+        ? 'bg-warn'
+        : 'bg-ok';
 
-    return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                    <DialogTitle>Detalhes do Jogador</DialogTitle>
-                    <DialogDescription>
-                        Informações detalhadas e estatísticas.
-                    </DialogDescription>
-                </DialogHeader>
+  return (
+    <div className="flex items-center gap-3">
+      <span className="w-16 shrink-0 text-2xs text-ink-dim">{label}</span>
+      <div className="h-[3px] flex-1 overflow-hidden rounded-full bg-line">
+        <div className={`h-full ${barColor}`} style={{ width: `${pct}%` }} />
+      </div>
+      <span className="w-9 shrink-0 text-right font-mono text-2xs tabular-nums text-ink">
+        {pct}%
+      </span>
+    </div>
+  );
+}
 
-                {isLoading ? (
-                    <div className="py-8 text-center">Carregando dados do jogador...</div>
-                ) : player ? (
-                    <div className="grid gap-4 py-4">
-                        <div className="flex items-center gap-4">
-                            <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center text-2xl font-bold">
-                                {player.lastUsername?.[0]?.toUpperCase()}
-                            </div>
-                            <div>
-                                <h3 className="font-bold text-lg">{player.lastUsername}</h3>
-                                <p className="text-sm text-muted-foreground">{player.serial}</p>
-                            </div>
-                        </div>
+export function PlayerDetailsDialog({
+  playerId,
+  open,
+  onOpenChange,
+}: PlayerDetailsDialogProps) {
+  const { data: player, isLoading } = useQuery<Player>({
+    queryKey: ['player', playerId],
+    queryFn: () => playersApi.getPlayer(playerId!),
+    enabled: Boolean(playerId) && open,
+  });
 
-                        <Separator />
+  const { data: activity = [] } = useQuery<any[]>({
+    queryKey: ['player-activity', playerId],
+    queryFn: () => analyticsApi.getPlayerActivity(playerId!, 24),
+    enabled: Boolean(playerId) && open,
+  });
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-1">
-                                <p className="text-sm font-medium text-muted-foreground">Dinheiro</p>
-                                <p className="font-bold text-green-500">${(player.money || 0).toLocaleString()}</p>
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-sm font-medium text-muted-foreground">Banco</p>
-                                <p className="font-bold text-blue-500">${(player.bank || 0).toLocaleString()}</p>
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-sm font-medium text-muted-foreground">Emprego</p>
-                                <Badge variant="outline">{player.job || 'Desempregado'}</Badge>
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-sm font-medium text-muted-foreground">Nível / XP</p>
-                                <p className="text-sm font-bold">Lvl {player.level || 1} <span className="text-xs font-normal text-muted-foreground">({player.experience || 0} XP)</span></p>
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-sm font-medium text-muted-foreground">Fome / Sede</p>
-                                <div className="flex gap-2">
-                                    <Badge variant={player.hunger < 30 ? "destructive" : "secondary"}>🍖 {Math.floor(player.hunger || 0)}%</Badge>
-                                    <Badge variant={player.thirst < 30 ? "destructive" : "secondary"}>💧 {Math.floor(player.thirst || 0)}%</Badge>
-                                </div>
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-sm font-medium text-muted-foreground">Vpoints</p>
-                                <p className="font-bold text-yellow-500">{player.premiumPoints || 0} VP</p>
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-sm font-medium text-muted-foreground">Tempo Total</p>
-                                <p className="font-bold">{Math.floor((player.totalPlaytime || 0) / 60)}h</p>
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-sm font-medium text-muted-foreground">Score de Risco</p>
-                                <Badge variant={player.riskScore > 0.7 ? "destructive" : "secondary"}>
-                                    {(player.riskScore * 100).toFixed(0)}%
-                                </Badge>
-                            </div>
-                        </div>
+  const riskPct = Math.round((Number(player?.riskScore) || 0) * 100);
 
-                        <Separator />
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[540px]">
+        <DialogHeader>
+          <DialogTitle>Ficha de Telemetria do Piloto</DialogTitle>
+          <DialogDescription>
+            Auditoria financeira, status vital e histórico de eventos nas últimas 24h.
+          </DialogDescription>
+        </DialogHeader>
 
-                        <div>
-                            <h4 className="font-semibold mb-2">Atividade Recente</h4>
-                            <ScrollArea className="h-[150px] w-full rounded-md border p-4">
-                                {/* Placeholder for activity log - API endpoint might be needed */}
-                                <div className="text-sm text-muted-foreground">
-                                    Nenhuma atividade recente registrada nesta sessão.
-                                </div>
-                            </ScrollArea>
-                        </div>
+        {isLoading ? (
+          <div className="py-10 text-center text-xs text-ink-dim">
+            Carregando telemetria do jogador…
+          </div>
+        ) : player ? (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-3 rounded-sm border border-line bg-bg2 p-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm border border-line-strong bg-bg3 font-display text-xl font-bold text-brass">
+                  {player.lastUsername?.[0]?.toUpperCase() || '?'}
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="truncate text-sm font-semibold text-ink">
+                      {player.lastUsername}
+                    </h3>
+                    <Badge variant="brass" className="font-mono">
+                      ID #{player.characterId || player.id}
+                    </Badge>
+                  </div>
+                  <p className="mt-0.5 truncate font-mono text-2xs text-ink-faint">
+                    {player.serial}
+                  </p>
+                </div>
+              </div>
 
-                    </div>
+              <Badge variant={riskPct >= 70 ? 'default' : riskPct >= 30 ? 'warn' : 'ok'}>
+                Risco {riskPct}%
+              </Badge>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+              <div className="rounded-sm border border-line bg-bg2 p-2.5">
+                <div className="text-2xs text-ink-faint">Dinheiro em Mãos</div>
+                <div className="mt-0.5 font-mono text-[13px] font-medium tabular-nums text-ok">
+                  {formatCurrency(player.money || 0)}
+                </div>
+              </div>
+              <div className="rounded-sm border border-line bg-bg2 p-2.5">
+                <div className="text-2xs text-ink-faint">Saldo Bancário</div>
+                <div className="mt-0.5 font-mono text-[13px] font-medium tabular-nums text-brass">
+                  {formatCurrency(player.bank || 0)}
+                </div>
+              </div>
+              <div className="rounded-sm border border-line bg-bg2 p-2.5">
+                <div className="text-2xs text-ink-faint">Nível / XP</div>
+                <div className="mt-0.5 font-mono text-[13px] font-medium tabular-nums text-ink">
+                  Lv.{player.level || 1}{' '}
+                  <span className="text-2xs text-ink-faint">({player.experience || 0})</span>
+                </div>
+              </div>
+              <div className="rounded-sm border border-line bg-bg2 p-2.5">
+                <div className="text-2xs text-ink-faint">VPoints / Tempo</div>
+                <div className="mt-0.5 font-mono text-[13px] font-medium tabular-nums text-brass">
+                  {player.premiumPoints || 0} VP ·{' '}
+                  <span className="text-ink">
+                    {formatPlaytimeHours(player.totalPlaytime || player.playedTime)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 rounded-sm border border-line bg-bg2 p-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <div className="text-2xs font-medium uppercase tracking-wider text-ink-faint">
+                  Status Vital & Risco
+                </div>
+                <TelemetryMeter label="Saciedade" value={player.hunger ?? 100} />
+                <TelemetryMeter label="Hidratação" value={player.thirst ?? 100} />
+                <TelemetryMeter
+                  label="Anomalia"
+                  value={riskPct}
+                  tone={riskPct >= 70 ? 'signal' : riskPct >= 30 ? 'warn' : 'ok'}
+                />
+              </div>
+
+              <div className="space-y-1.5 border-t border-line pt-2 sm:border-l sm:border-t-0 sm:pl-3 sm:pt-0">
+                <div className="text-2xs font-medium uppercase tracking-wider text-ink-faint">
+                  Vínculo Operacional
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-ink-dim">Ocupação</span>
+                  <span className="font-medium text-ink">{player.job || 'Desempregado'}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-ink-dim">Facção / Equipe</span>
+                  <span className="font-mono text-brass">{player.faction || 'Civil'}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-ink-dim">Status Conta</span>
+                  <span className={player.isBanned ? 'text-signal' : 'text-ok'}>
+                    {player.isBanned ? 'Bloqueado' : 'Regular'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div className="mb-1.5 flex items-center justify-between">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-ink-dim">
+                  Timeline de Eventos (24h)
+                </h4>
+                <span className="font-mono text-2xs text-ink-faint">
+                  {activity.length} registros
+                </span>
+              </div>
+              <div className="max-h-[150px] space-y-1.5 overflow-y-auto rounded-sm border border-line bg-bg0 p-2.5">
+                {activity.length === 0 ? (
+                  <div className="py-4 text-center text-2xs text-ink-dim">
+                    Nenhuma atividade registrada nesta janela.
+                  </div>
                 ) : (
-                    <div className="py-8 text-center text-muted-foreground">Jogador não encontrado</div>
+                  activity.map((ev: any, idx: number) => (
+                    <div
+                      key={ev.id || idx}
+                      className="flex items-center justify-between gap-2 border-b border-line/50 pb-1.5 text-xs last:border-b-0 last:pb-0"
+                    >
+                      <div className="min-w-0">
+                        <span className="font-mono text-2xs text-brass">
+                          [{ev.eventType}]
+                        </span>{' '}
+                        <span className="text-ink-dim">
+                          {ev.data?.description ||
+                            ev.data?.vehicleName ||
+                            (ev.positionX !== undefined
+                              ? `Posição X:${Math.round(ev.positionX)} Y:${Math.round(ev.positionY)}`
+                              : 'Evento registrado')}
+                        </span>
+                      </div>
+                      <span className="shrink-0 font-mono text-2xs tabular-nums text-ink-faint">
+                        {formatTime(ev.timestamp)}
+                      </span>
+                    </div>
+                  ))
                 )}
-            </DialogContent>
-        </Dialog>
-    )
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="py-8 text-center text-xs text-ink-dim">
+            Jogador não encontrado.
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
 }

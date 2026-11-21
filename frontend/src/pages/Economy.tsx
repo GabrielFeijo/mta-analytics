@@ -1,99 +1,127 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { TrendingUp, DollarSign } from 'lucide-react';
+import { TrendingUp, DollarSign, Wallet } from 'lucide-react';
 import { economyApi } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { TransactionTable } from '@/components/economy/TransactionTable';
 
 export default function Economy() {
-	const { data: snapshot, isLoading } = useQuery({
-		queryKey: ['economy-snapshot'],
-		queryFn: economyApi.getSnapshot,
-		refetchInterval: 30000,
-	});
+  const [typeFilter, setTypeFilter] = useState<'ALL' | 'EARN' | 'SPEND'>('ALL');
 
-	const { data: transactions, isLoading: isTxLoading } = useQuery({
-		queryKey: ['recent-transactions'],
-		queryFn: () => economyApi.getRecentTransactions(20),
-		refetchInterval: 10000,
-	});
+  const { data: snapshot, isLoading } = useQuery({
+    queryKey: ['economy-snapshot'],
+    queryFn: economyApi.getSnapshot,
+    refetchInterval: 30000,
+  });
 
-	if (isLoading) {
-		return (
-			<div className="flex items-center justify-center min-h-[400px]">
-				<div className="text-xl animate-pulse">Carregando estatísticas de economia...</div>
-			</div>
-		);
-	}
+  const { data: transactions = [], isLoading: isTxLoading } = useQuery({
+    queryKey: ['recent-transactions'],
+    queryFn: () => economyApi.getRecentTransactions(40),
+    refetchInterval: 10000,
+  });
 
-	return (
-		<div className='flex-1 space-y-4 p-8 pt-6'>
-			<div className='flex items-center justify-between space-y-2'>
-				<h2 className='text-3xl font-bold tracking-tight'>Economia</h2>
-				<div className='flex items-center space-x-2'></div>
-			</div>
+  const filteredTx = transactions.filter((tx) => {
+    if (typeFilter === 'ALL') return true;
+    if (typeFilter === 'EARN') return tx.type === 'EARN' || tx.type === 'TRANSFER_IN';
+    return tx.type === 'SPEND' || tx.type === 'TRANSFER_OUT';
+  });
 
-			<div className='grid gap-4 md:grid-cols-3'>
-				<Card>
-					<CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-						<CardTitle className='text-sm font-medium'>Dinheiro Total</CardTitle>
-						<DollarSign className='h-4 w-4 text-muted-foreground' />
-					</CardHeader>
-					<CardContent>
-						<div className='text-2xl font-bold'>
-							{formatCurrency(snapshot?.totalMoney || 0)}
-						</div>
-						<p
-							className={`text-xs ${snapshot?.inflationRate >= 0 ? 'text-red-500' : 'text-green-500'}`}
-						>
-							Inflação: {snapshot?.inflationRate}%
-						</p>
-					</CardContent>
-				</Card>
-				<Card>
-					<CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-						<CardTitle className='text-sm font-medium'>
-							Dinheiro em Circulação
-						</CardTitle>
-						<TrendingUp className='h-4 w-4 text-muted-foreground' />
-					</CardHeader>
-					<CardContent>
-						<div className='text-2xl font-bold'>
-							{formatCurrency(snapshot?.moneyInCirc || 0)}
-						</div>
-						<p className='text-xs text-muted-foreground'>Geralmente dinheiro vivo</p>
-					</CardContent>
-				</Card>
-				<Card>
-					<CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-						<CardTitle className='text-sm font-medium'>
-							Riqueza Média por Jogador
-						</CardTitle>
-						<DollarSign className='h-4 w-4 text-muted-foreground' />
-					</CardHeader>
-					<CardContent>
-						<div className='text-2xl font-bold'>
-							{formatCurrency(snapshot?.avgPlayerWealth || 0)}
-						</div>
-						<p className='text-xs text-muted-foreground'>Por jogador ativo</p>
-					</CardContent>
-				</Card>
-			</div>
+  const inflation = Number(snapshot?.inflationRate) || 0;
 
-			<div className='grid gap-4 md:grid-cols-1'>
-				<Card>
-					<CardHeader>
-						<CardTitle>Transações Recentes</CardTitle>
-					</CardHeader>
-					<CardContent>
-						{isTxLoading ? (
-							<div>Carregando transações...</div>
-						) : (
-							<TransactionTable transactions={transactions || []} />
-						)}
-					</CardContent>
-				</Card>
-			</div>
-		</div>
-	);
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        <div className="rounded-md border border-line bg-bg1 px-4 py-3">
+          <div className="flex items-center justify-between text-2xs text-ink-faint">
+            <span>MASSA MONETÁRIA TOTAL</span>
+            <DollarSign className="h-3.5 w-3.5 text-brass" strokeWidth={1.75} />
+          </div>
+          <div className="mt-1 font-mono text-2xl font-medium tabular-nums text-brass">
+            {isLoading ? '…' : formatCurrency(snapshot?.totalMoney || 0)}
+          </div>
+          <div className="mt-0.5 flex items-center justify-between text-2xs text-ink-dim">
+            <span>Soma de bancos + carteira</span>
+            <span className={`font-mono ${inflation > 5 ? 'text-signal' : 'text-ok'}`}>
+              Inflação {inflation >= 0 ? `+${inflation}%` : `${inflation}%`}
+            </span>
+          </div>
+        </div>
+
+        <div className="rounded-md border border-line bg-bg1 px-4 py-3">
+          <div className="flex items-center justify-between text-2xs text-ink-faint">
+            <span>LIQUIDEZ EM CIRCULAÇÃO</span>
+            <TrendingUp className="h-3.5 w-3.5 text-ok" strokeWidth={1.75} />
+          </div>
+          <div className="mt-1 font-mono text-2xl font-medium tabular-nums text-ink">
+            {isLoading ? '…' : formatCurrency(snapshot?.moneyInCirc || 0)}
+          </div>
+          <div className="mt-0.5 text-2xs text-ink-dim">
+            Capital líquido movimentado ativamente
+          </div>
+        </div>
+
+        <div className="rounded-md border border-line bg-bg1 px-4 py-3">
+          <div className="flex items-center justify-between text-2xs text-ink-faint">
+            <span>PATRIMÔNIO MÉDIO POR PILOTO</span>
+            <Wallet className="h-3.5 w-3.5 text-ink-dim" strokeWidth={1.75} />
+          </div>
+          <div className="mt-1 font-mono text-2xl font-medium tabular-nums text-ink">
+            {isLoading ? '…' : formatCurrency(snapshot?.avgPlayerWealth || 0)}
+          </div>
+          <div className="mt-0.5 text-2xs text-ink-dim">
+            Média ponderada por personagem ativo
+          </div>
+        </div>
+      </div>
+
+      <Card>
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
+          <div>
+            <CardTitle>Livro-Razão de Transações em Tempo Real</CardTitle>
+            <CardDescription>
+              Auditoria de salários, bancos, concessionárias, postos, multas e rachas (`mta_racing`).
+            </CardDescription>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            {(
+              [
+                { key: 'ALL', label: 'Todas' },
+                { key: 'EARN', label: 'Entradas (+)' },
+                { key: 'SPEND', label: 'Saídas (-)' },
+              ] as const
+            ).map((f) => (
+              <button
+                key={f.key}
+                type="button"
+                onClick={() => setTypeFilter(f.key)}
+                className={`h-7 rounded-sm border px-2.5 text-xs font-medium transition-colors ${
+                  typeFilter === f.key
+                    ? 'border-line-strong bg-bg3 text-ink'
+                    : 'border-line bg-bg2 text-ink-dim hover:text-ink'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+            <Badge variant="brass" className="ml-1 font-mono">
+              {filteredTx.length}
+            </Badge>
+          </div>
+        </CardHeader>
+
+        <CardContent className="p-0">
+          {isTxLoading ? (
+            <div className="py-12 text-center text-xs text-ink-dim">
+              Carregando transações…
+            </div>
+          ) : (
+            <TransactionTable transactions={filteredTx} />
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
 }

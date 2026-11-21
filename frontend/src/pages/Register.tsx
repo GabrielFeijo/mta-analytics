@@ -1,103 +1,109 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { ShieldPlus } from 'lucide-react';
 import { authApi } from '@/lib/api';
 import Logo from '@/components/layout/Logo';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 export default function Register() {
-    const [username, setUsername] = useState('');
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
-    const [loading, setLoading] = useState(false);
-    const navigate = useNavigate();
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setError('');
-        setLoading(true);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
 
-        try {
-            await authApi.register(username, email, password);
-            navigate('/login', { state: { message: 'Cadastro realizado com sucesso! Faça login para continuar.' } });
-        } catch (err: any) {
-            setError(err.response?.data?.message || 'Falha ao cadastrar. Tente novamente.');
-        } finally {
-            setLoading(false);
-        }
-    };
+    try {
+      await authApi.register(username, email, password);
+      navigate('/login');
+    } catch (err: any) {
+      setError(
+        err.response?.data?.message || 'Não foi possível concluir o cadastro.',
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    return (
-        <div className="min-h-screen flex items-center justify-center bg-background p-4">
-            <div className="w-full max-w-md space-y-8">
-                <div className="flex flex-col items-center justify-center text-center">
-                    <Logo className="mb-4" iconSize={48} textSize="text-4xl" />
-                    <p className="text-muted-foreground mt-2 font-medium">Crie sua conta administrativa</p>
-                </div>
-
-                <div className="bg-card p-8 rounded-2xl border border-border shadow-xl space-y-6">
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        {error && (
-                            <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
-                                <p className="text-sm text-destructive font-medium text-center">{error}</p>
-                            </div>
-                        )}
-
-                        <div className="space-y-2">
-                            <label className="text-sm font-semibold ml-1">Usuário</label>
-                            <input
-                                type="text"
-                                value={username}
-                                onChange={(e) => setUsername(e.target.value)}
-                                className="w-full px-4 py-3 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                                placeholder="Escolha um nome de usuário"
-                                required
-                            />
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="text-sm font-semibold ml-1">E-mail</label>
-                            <input
-                                type="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                className="w-full px-4 py-3 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                                placeholder="seu@email.com"
-                                required
-                            />
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="text-sm font-semibold ml-1">Senha</label>
-                            <input
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="w-full px-4 py-3 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                                placeholder="Mínimo 6 caracteres"
-                                required
-                                minLength={6}
-                            />
-                        </div>
-
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="w-full py-4 bg-primary text-primary-foreground rounded-md font-bold hover:bg-primary/90 disabled:opacity-50 transition-all shadow-lg shadow-primary/20 active:scale-[0.98]"
-                        >
-                            {loading ? 'Cadastrando...' : 'Criar Conta'}
-                        </button>
-                    </form>
-
-                    <div className="text-center">
-                        <p className="text-sm text-muted-foreground">
-                            Já tem uma conta?{' '}
-                            <Link to="/login" className="text-primary font-bold hover:underline">
-                                Entre aqui
-                            </Link>
-                        </p>
-                    </div>
-                </div>
-            </div>
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-bg0 p-4 text-ink">
+      <div className="w-full max-w-sm space-y-5">
+        <div className="flex flex-col items-center text-center">
+          <Logo iconSize={40} textSize="text-2xl" />
+          <p className="mt-2 text-xs text-ink-dim">
+            Registro de operador para a central de telemetria MTA Analytics.
+          </p>
         </div>
-    );
+
+        <div className="rounded-md border border-line-strong bg-bg1 p-5">
+          <div className="mb-4 flex items-center justify-between border-b border-line pb-2.5">
+            <span className="font-display text-sm font-semibold uppercase tracking-wider text-ink">
+              Novo Operador
+            </span>
+            <span className="font-mono text-2xs text-brass">CADASTRO</span>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-3.5">
+            {error && (
+              <div className="rounded-sm border border-line border-l-2 border-l-signal bg-bg2 p-2.5 text-xs text-ink">
+                {error}
+              </div>
+            )}
+
+            <div>
+              <label className="mb-1 block text-2xs text-ink-dim">Identificação (Usuário)</label>
+              <Input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Ex: Gabriel_Feijo"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-2xs text-ink-dim">E-mail Operacional</label>
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="admin@servidor.rp"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-2xs text-ink-dim">Chave de Acesso</label>
+              <Input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Mínimo 6 caracteres"
+                required
+                minLength={6}
+              />
+            </div>
+
+            <Button type="submit" disabled={loading} className="w-full">
+              <ShieldPlus className="h-3.5 w-3.5" strokeWidth={1.75} />
+              {loading ? 'Registrando…' : 'Criar Credencial'}
+            </Button>
+          </form>
+
+          <div className="mt-4 text-center text-2xs text-ink-dim">
+            Já possui credencial?{' '}
+            <Link to="/login" className="font-medium text-brass hover:underline">
+              Voltar para autenticação
+            </Link>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }

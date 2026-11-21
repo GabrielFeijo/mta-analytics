@@ -184,7 +184,7 @@ mta-analytics/
 │       └── styles/
 │           └── globals.css
 │
-├── mta-analytics-resource/         # Resource Lua para MTA
+├── mta_analytics_resource/         # Resource Lua para MTA
 │   ├── meta.xml                   # Metadata do resource
 │   ├── client/
 │   │   ├── main.lua              # Entry point cliente
