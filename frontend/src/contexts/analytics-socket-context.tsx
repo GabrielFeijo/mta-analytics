@@ -112,7 +112,7 @@ export function AnalyticsSocketProvider({ children }: { children: ReactNode }) {
   );
 
   const subscribe = useCallback(
-    <T = unknown>(event: string, callback: SocketListener<T>) => {
+    function <T = unknown>(event: string, callback: SocketListener<T>) {
       let eventSet = listenersRef.current.get(event);
       if (!eventSet) {
         eventSet = new Set();
