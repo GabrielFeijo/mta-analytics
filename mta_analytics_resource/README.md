@@ -48,7 +48,7 @@
 
 ```lua
 exports["mta_analytics_resource"]:logTransaction(player, "race_dirty_earn", 45000, "1º Lugar — High Stakes: El Corona")
-exports["mta_analytics_resource"]:logMoneyChange(player, 22500, 185000, "spc_employment")
+exports["mta_analytics_resource"]:logMoneyChange(player, 22500, 185000, "my_resource")
 exports["mta_analytics_resource"]:logVehiclePurchase(player, 411, 285000, "bank")
 exports["mta_analytics_resource"]:logFine(player, 4800, "Excesso de velocidade (198 km/h)", "R34-9981")
 exports["mta_analytics_resource"]:logEvent(player, "faction_action", { action = "territory_capture", faction = "Garage Night" })

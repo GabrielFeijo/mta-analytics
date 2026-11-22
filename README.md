@@ -45,7 +45,7 @@
 - **Processamento Assíncrono, SQL Nativo & Motor de Risco (`0.0–1.0`)**: ingestão em lote com retries exponenciais na Bull Queue + pipeline Redis ([`mta.service.ts`](backend/src/mta/mta.service.ts)), serviços SRP em `backend/src/analytics/services/`, agregações SQL diretas no PostgreSQL para mapa de calor (`FLOOR("positionX" / gridSize)`), massa monetária (`SUM(money + bank)` + `dirtyMoney`) e fluxo de 7 dias (`DATE_TRUNC('day', timestamp)`), cálculo automático de `riskScore` ([`risk-scoring.service.ts`](backend/src/analytics/services/risk-scoring.service.ts)) e job diário de retenção de posições/sessões (`EVENT_RETENTION_DAYS=14`).
 - **Design System "Garage Night" Compartilhado**: paleta noturna de alta legibilidade definida em [`tokens.css`](frontend/src/styles/tokens.css) (`#0F1012` / `#16171A` / `#1E2024`, **Sinal `#D9482F`**, **Latão `#C8A455`**, **Sálvia `#7FA37A`**, **Âmbar `#D49B3F`**), fontes locais embarcadas (`Barlow Condensed`, `Inter Tight`, `JetBrains Mono`) com números tabulares (`tabular-nums`) e cartografia noturna de San Andreas (`map-garage-night.png`).
 - **Frontend SPA Modular (`kebab-case`) & WebSocket Único**: conexão Socket.IO única compartilhada por [`AnalyticsSocketProvider`](frontend/src/contexts/analytics-socket-context.tsx), [`useAuthStore`](frontend/src/stores/auth-store.ts) como fonte única de sessão, busca de pilotos com debounce (`300ms`), janelas dinâmicas (`6H | 24H | 7D`), drawer responsivo para mobile ([`app-layout.tsx`](frontend/src/components/layout/app-layout.tsx)) e **Modo Snapshot Local** isolado em [`telemetry-snapshot.ts`](frontend/src/mocks/telemetry-snapshot.ts) com banner explícito.
-- **Integração Direta com o Ecossistema RP**: auditoria unificada de corridas clandestinas (`mta_racing` em dinheiro limpo e blocos sujos), concessionárias (`spc_carshop`), lojas, oficinas, postos e radares de trânsito (`fine_issued` com placa e autuação).
+- **Integração Direta com o Ecossistema RP**: auditoria unificada de corridas clandestinas (`mta_racing` em dinheiro limpo e blocos sujos), concessionárias (`carshop`), lojas, oficinas, postos e radares de trânsito (`fine_issued` com placa e autuação).
 
 ---
 
@@ -80,7 +80,7 @@
 - `getQueueStatus()` (`server`) → retorna `{ pending, totalQueued, totalDropped, circuitOpen, circuitState, inFlight }`
 
 ```lua
--- Exemplo em outro resource server-side (ex.: mta_racing ou spc_carshop)
+-- Exemplo em outro resource server-side
 exports["mta_analytics_resource"]:logTransaction(player, "race_dirty_earn", 45000, "1º Lugar — High Stakes: El Corona")
 exports["mta_analytics_resource"]:logFine(player, 4800, "Radar 198 km/h — Mulholland", "R34-9981")
 ```
