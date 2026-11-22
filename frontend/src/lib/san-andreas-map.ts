@@ -62,13 +62,20 @@ export function renderHeatmapCanvas(
 
   for (const point of points) {
     const { px, py } = worldToCanvas(Number(point.x) || 0, Number(point.y) || 0, size);
-    const intensity = Math.max(0.18, Math.min(1, Number(point.intensity) || 0.4));
-    const radius = 18 + intensity * 18;
+    const intensity = Math.max(0.15, Math.min(1, Number(point.intensity) || 0.25));
+    const radius = 16 + intensity * 20;
+    const isHot = intensity >= 0.65;
 
     const gradient = ctx.createRadialGradient(px, py, 0, px, py, radius);
-    gradient.addColorStop(0, `rgba(217, 72, 47, ${Math.min(0.92, intensity + 0.25)})`);
-    gradient.addColorStop(0.45, `rgba(200, 164, 85, ${intensity * 0.55})`);
-    gradient.addColorStop(1, 'rgba(200, 164, 85, 0)');
+    if (isHot) {
+      gradient.addColorStop(0, `rgba(217, 72, 47, ${Math.min(0.92, intensity + 0.25)})`);
+      gradient.addColorStop(0.45, `rgba(200, 164, 85, ${intensity * 0.55})`);
+      gradient.addColorStop(1, 'rgba(200, 164, 85, 0)');
+    } else {
+      gradient.addColorStop(0, `rgba(212, 155, 63, ${Math.min(0.75, intensity + 0.22)})`);
+      gradient.addColorStop(0.5, `rgba(200, 164, 85, ${intensity * 0.4})`);
+      gradient.addColorStop(1, 'rgba(200, 164, 85, 0)');
+    }
 
     ctx.fillStyle = gradient;
     ctx.beginPath();

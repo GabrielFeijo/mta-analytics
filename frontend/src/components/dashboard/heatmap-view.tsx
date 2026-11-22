@@ -82,6 +82,11 @@ export function HeatmapView() {
     );
   }
 
+  const totalOccurrences = heatmapData.reduce(
+    (acc, spot) => acc + (Number(spot.count) || 0),
+    0,
+  );
+
   const topHotspots = [...heatmapData]
     .sort((a, b) => (Number(b.count) || 0) - (Number(a.count) || 0))
     .slice(0, 6);
@@ -164,12 +169,19 @@ export function HeatmapView() {
       </Card>
 
       <Card className="self-start xl:col-span-4">
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <Flame className="h-4 w-4 text-signal" strokeWidth={1.75} />
             <CardTitle>Zonas de Maior Concentração</CardTitle>
           </div>
-          <Badge variant="brass">{heatmapData.length} células</Badge>
+          <div className="flex items-center gap-1.5">
+            <Badge variant="outline" className="font-mono">
+              {totalOccurrences} {totalOccurrences === 1 ? 'ocorrência' : 'ocorrências'}
+            </Badge>
+            <Badge variant="brass" className="font-mono">
+              {heatmapData.length} {heatmapData.length === 1 ? 'célula' : 'células'}
+            </Badge>
+          </div>
         </CardHeader>
 
         <CardContent className="space-y-2.5">
@@ -181,8 +193,10 @@ export function HeatmapView() {
             topHotspots.map((spot, idx) => {
               const x = Math.round(Number(spot.x) || 0);
               const y = Math.round(Number(spot.y) || 0);
+              const count = Number(spot.count) || 0;
               const zone = spot.label || resolveRegionLabel(x, y);
               const pct = Math.round(Math.min(1, Number(spot.intensity) || 0) * 100);
+              const isHot = pct >= 75;
 
               return (
                 <div
@@ -198,15 +212,15 @@ export function HeatmapView() {
                         {zone}
                       </span>
                     </div>
-                    <Badge variant={pct >= 80 ? 'default' : 'brass'}>
-                      {spot.count || 1} ocorrências
+                    <Badge variant={isHot ? 'default' : 'brass'} className="shrink-0 whitespace-nowrap">
+                      {count} {count === 1 ? 'ocorrência' : 'ocorrências'}
                     </Badge>
                   </div>
 
                   <div className="mt-2 flex items-center gap-2">
                     <div className="h-[3px] flex-1 overflow-hidden rounded-full bg-line">
                       <div
-                        className={`h-full ${pct >= 80 ? 'bg-signal' : 'bg-brass'}`}
+                        className={`h-full ${isHot ? 'bg-signal' : 'bg-brass'}`}
                         style={{ width: `${pct}%` }}
                       />
                     </div>

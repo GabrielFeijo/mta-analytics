@@ -211,18 +211,78 @@ export const MOCK_TRANSACTIONS: Transaction[] = [
   },
 ];
 
-export const MOCK_HEATMAP_POINTS: HeatmapPoint[] = [
-  { x: 1910, y: -1932, intensity: 0.96, count: 48, label: 'El Corona / Grid Clandestino' },
-  { x: 1480, y: -1740, intensity: 0.88, count: 42, label: 'Pershing Square / DP Central' },
-  { x: 2120, y: -1150, intensity: 0.74, count: 31, label: 'Idlewood / East Los Santos' },
-  { x: 965, y: -1572, intensity: 0.82, count: 37, label: 'Market & Rodeo Boulevard' },
-  { x: 2670, y: -1933, intensity: 0.69, count: 27, label: 'Docas de Willowfield' },
-  { x: 2210, y: 42, intensity: 0.61, count: 22, label: 'Palomino Creek Touge' },
-  { x: -2075, y: 730, intensity: 0.77, count: 33, label: 'San Fierro Hills / Chinatown' },
-  { x: -1800, y: -260, intensity: 0.65, count: 24, label: 'Doherty Industrial SF' },
-  { x: 2503, y: 1072, intensity: 0.85, count: 39, label: 'The Strip / Las Venturas' },
-  { x: -80, y: 1424, intensity: 0.54, count: 18, label: 'Rota 69 / Bone County' },
-];
+interface MockHeatmapSeed {
+  x: number;
+  y: number;
+  count: number;
+  label: string;
+}
+
+const MOCK_HEATMAP_SEEDS: Record<string, MockHeatmapSeed[]> = {
+  player_position: [
+    { x: 1910, y: -1932, count: 48, label: 'El Corona / Grid Clandestino' },
+    { x: 1480, y: -1740, count: 42, label: 'Pershing Square / DP Central' },
+    { x: 2503, y: 1072, count: 39, label: 'The Strip / Las Venturas' },
+    { x: 965, y: -1572, count: 37, label: 'Market & Rodeo Boulevard' },
+    { x: -2075, y: 730, count: 33, label: 'San Fierro Hills / Chinatown' },
+    { x: 2120, y: -1150, count: 31, label: 'Idlewood / East Los Santos' },
+    { x: 2670, y: -1933, count: 27, label: 'Docas de Willowfield' },
+    { x: -1800, y: -260, count: 24, label: 'Doherty Industrial SF' },
+    { x: 2210, y: 42, count: 22, label: 'Palomino Creek Touge' },
+    { x: -80, y: 1424, count: 18, label: 'Rota 69 / Bone County' },
+  ],
+  player_transaction: [
+    { x: 1910, y: -1932, count: 4, label: 'El Corona / Grid Clandestino' },
+    { x: 2670, y: -1933, count: 3, label: 'Docas de Willowfield' },
+    { x: -2075, y: 730, count: 2, label: 'San Fierro Hills / Chinatown' },
+    { x: 2210, y: 42, count: 1, label: 'Palomino Creek Touge' },
+  ],
+  fine_issued: [
+    { x: 1412, y: -1380, count: 5, label: 'Mulholland Intersection / Radar' },
+    { x: 965, y: -1572, count: 4, label: 'Market & Rodeo Boulevard' },
+    { x: 2120, y: -1150, count: 3, label: 'Idlewood / Cruzamento Urbano' },
+    { x: 1480, y: -1740, count: 2, label: 'Pershing Square / Semáforo' },
+  ],
+  player_wasted: [
+    { x: 2120, y: -1150, count: 3, label: 'Idlewood / East Los Santos' },
+    { x: 2670, y: -1933, count: 2, label: 'Docas de Willowfield' },
+    { x: -1800, y: -260, count: 1, label: 'Doherty Industrial SF' },
+  ],
+  vehicle_purchase: [
+    { x: 965, y: -1572, count: 2, label: 'Concessionária Market / Rodeo (LS)' },
+    { x: -1956, y: 294, count: 1, label: 'Concessionária Doherty / Wang Cars (SF)' },
+  ],
+};
+
+export function getMockHeatmapData(
+  eventType: string,
+  windowHours: number = 24,
+): HeatmapPoint[] {
+  const seeds = MOCK_HEATMAP_SEEDS[eventType] || MOCK_HEATMAP_SEEDS.player_position;
+  const factor = windowHours <= 6 ? 0.35 : windowHours <= 24 ? 1 : 4.5;
+
+  const scaled = seeds
+    .map((seed) => ({
+      ...seed,
+      count: Math.round(seed.count * factor),
+    }))
+    .filter((seed) => seed.count > 0);
+
+  if (scaled.length === 0) {
+    return [];
+  }
+
+  const maxCount = Math.max(1, ...scaled.map((s) => s.count));
+  const baseline = Math.max(5, maxCount);
+
+  return scaled.map((seed) => ({
+    x: seed.x,
+    y: seed.y,
+    count: seed.count,
+    intensity: Math.round(Math.min(1, seed.count / baseline) * 1000) / 1000,
+    label: seed.label,
+  }));
+}
 
 export function getMockDashboardStats(): DashboardStats {
   return {

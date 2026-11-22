@@ -3,9 +3,9 @@ import { useAuthStore } from '@/stores/auth-store';
 import {
   getMockDashboardStats,
   getMockFinesStats,
+  getMockHeatmapData,
   getMockPlayerActivity,
   getMockResourcesStats,
-  MOCK_HEATMAP_POINTS,
   MOCK_OVERVIEW_DATA,
   MOCK_SERVER_STATUS,
 } from '@/mocks/telemetry-snapshot';
@@ -47,7 +47,11 @@ export const analyticsApi = {
     endDate: Date;
   }): Promise<HeatmapPoint[]> => {
     if (isDemo()) {
-      return MOCK_HEATMAP_POINTS;
+      const windowHours = Math.max(
+        1,
+        Math.round((params.endDate.getTime() - params.startDate.getTime()) / (60 * 60 * 1000)),
+      );
+      return getMockHeatmapData(params.eventType, windowHours);
     }
     const response = await httpClient.get<HeatmapPoint[]>('/analytics/heatmap', {
       params: {
