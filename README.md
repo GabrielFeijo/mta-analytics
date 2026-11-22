@@ -1,4 +1,4 @@
-# 📊 MTA Garage Night Analytics (`mta_analytics`)
+# 📊 MTA Analytics
 
 > Plataforma full-stack de telemetria, auditoria econômica, cartografia térmica e detecção de anomalias em tempo real para **MTA:SA Roleplay**, composta por coletor Lua 100% server-side com assinatura HMAC-SHA256, API NestJS + Prisma + Bull/Redis, WebSocket autenticado e dashboard SPA projetado no design system **"Garage Night"** em conjunto com o `mta_radar`, o `mta_racing` e o `mta_speedometer`.
 
