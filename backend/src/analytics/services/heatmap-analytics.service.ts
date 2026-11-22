@@ -9,6 +9,21 @@ export interface HeatmapCell {
     count: number;
 }
 
+const SPARSE_INTENSITY_FLOOR = 5;
+
+/**
+ * Normalizes cell intensity in [0, 1] while preventing sparse layers (e.g. 1-2 vehicle sales)
+ * from appearing at 100% critical heat.
+ */
+export function computeCellIntensity(count: number, maxCount: number): number {
+    const safeCount = Math.max(0, Number(count) || 0);
+    if (safeCount === 0) {
+        return 0;
+    }
+    const baseline = Math.max(SPARSE_INTENSITY_FLOOR, Number(maxCount) || 0);
+    return Math.round(Math.min(1, safeCount / baseline) * 1000) / 1000;
+}
+
 @Injectable()
 export class HeatmapAnalyticsService {
     constructor(private readonly prisma: PrismaService) {}
@@ -36,15 +51,15 @@ export class HeatmapAnalyticsService {
             Array<{ x: number; y: number; count: number }>
         >`
             SELECT
-                (FLOOR("positionX" / ${gridSize}) * ${gridSize})::double precision AS x,
-                (FLOOR("positionY" / ${gridSize}) * ${gridSize})::double precision AS y,
+                AVG("positionX")::double precision AS x,
+                AVG("positionY")::double precision AS y,
                 COUNT(*)::int AS count
             FROM "events"
             WHERE "timestamp" BETWEEN ${filters.startDate} AND ${filters.endDate}
               AND "positionX" IS NOT NULL
               AND "positionY" IS NOT NULL
               ${eventFilter}
-            GROUP BY 1, 2
+            GROUP BY FLOOR("positionX" / ${gridSize}), FLOOR("positionY" / ${gridSize})
             ORDER BY count DESC
             LIMIT 2000
         `;
@@ -58,7 +73,7 @@ export class HeatmapAnalyticsService {
             x: row.x,
             y: row.y,
             count: row.count,
-            intensity: row.count / maxCount,
+            intensity: computeCellIntensity(row.count, maxCount),
         }));
     }
 }
