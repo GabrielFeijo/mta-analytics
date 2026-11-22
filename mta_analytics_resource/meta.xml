@@ -1,0 +1,29 @@
+<meta>
+    <info author="Gabriel Feijo" name="MTA Analytics Collector" version="2.1.0" type="script" description="Coletor assíncrono server-side de telemetria, economia, corridas e eventos em tempo real para o painel MTA Analytics" />
+    <oop>true</oop>
+    <min_mta_version server="1.5.9" client="1.5.9" />
+
+    <script src="server/config.lua" type="server" />
+    <script src="server/core/utils.lua" type="server" />
+    <script src="server/core/crypto.lua" type="server" />
+    <script src="server/core/queue.lua" type="server" />
+    <script src="server/core/request.lua" type="server" />
+
+    <script src="server/collectors/player-events.lua" type="server" />
+    <script src="server/collectors/combat-events.lua" type="server" />
+    <script src="server/collectors/player-details.lua" type="server" />
+
+    <script src="server/core/exports.lua" type="server" />
+    <script src="server/main.lua" type="server" />
+
+    <export function="logTransaction" type="server" />
+    <export function="logVehiclePurchase" type="server" />
+    <export function="logEvent" type="server" />
+    <export function="logFine" type="server" />
+    <export function="logMoneyChange" type="server" />
+    <export function="getQueueStatus" type="server" />
+
+    <aclrequest>
+        <right name="function.fetchRemote" access="true" />
+    </aclrequest>
+</meta>

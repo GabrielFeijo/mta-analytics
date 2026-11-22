@@ -1,78 +1,77 @@
 import { Injectable } from '@nestjs/common';
+import { EconomicMetric } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
+import { EconomyMetricsService } from '../analytics/services/economy-metrics.service';
+import { EconomyPeriod, EconomyTimeSeriesMetric } from './dto/economy-query.dto';
+
+const PERIOD_HOURS: Record<EconomyPeriod, number> = {
+    '24h': 24,
+    '7d': 7 * 24,
+    '30d': 30 * 24,
+};
+
+function readMetricField(row: EconomicMetric, metric: EconomyTimeSeriesMetric): number {
+    switch (metric) {
+        case 'totalMoney':
+            return row.totalMoney;
+        case 'moneyInCirc':
+            return row.moneyInCirc;
+        case 'avgPlayerWealth':
+            return row.avgPlayerWealth;
+        case 'inflationRate':
+            return row.inflationRate ?? 0;
+    }
+}
+
+function extractDescription(metadata: unknown): string | null {
+    if (!metadata || typeof metadata !== 'object') {
+        return null;
+    }
+    const record = metadata as Record<string, unknown>;
+    if (typeof record.description === 'string' && record.description.trim()) {
+        return record.description;
+    }
+    if (typeof record.vehicleName === 'string' && record.vehicleName.trim()) {
+        return record.vehicleName;
+    }
+    if (typeof record.reason === 'string' && record.reason.trim()) {
+        return record.reason;
+    }
+    return null;
+}
 
 @Injectable()
 export class EconomyService {
-    constructor(private prisma: PrismaService) { }
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly economyMetrics: EconomyMetricsService,
+    ) {}
 
     async getSnapshot() {
-        const latest = await this.prisma.economicMetric.findFirst({
-            orderBy: {
-                timestamp: 'desc',
-            },
-        });
-
-        if (!latest) {
-            const [totalPlayers, totalTransactions] = await Promise.all([
-                this.prisma.player.count(),
-                this.prisma.transaction.aggregate({
-                    _sum: { amount: true },
-                }),
-            ]);
-
-            return {
-                totalMoney: totalTransactions._sum.amount || 0,
-                moneyInCirc: totalTransactions._sum.amount || 0,
-                avgPlayerWealth: totalPlayers > 0 ? (totalTransactions._sum.amount || 0) / totalPlayers : 0,
-                inflationRate: 0,
-                timestamp: new Date(),
-            };
-        }
-
-        return latest;
+        return this.economyMetrics.getEconomicSnapshot();
     }
 
-    async getTimeSeries(metric: string, period: string) {
-        const now = new Date();
-        let startDate: Date;
-
-        switch (period) {
-            case '24h':
-                startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-                break;
-            case '7d':
-                startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                break;
-            case '30d':
-                startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-                break;
-            default:
-                startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-        }
+    async getTimeSeries(metric: EconomyTimeSeriesMetric, period: EconomyPeriod = '24h') {
+        const hours = PERIOD_HOURS[period] ?? 24;
+        const startDate = new Date(Date.now() - hours * 60 * 60 * 1000);
 
         const metrics = await this.prisma.economicMetric.findMany({
             where: {
-                timestamp: {
-                    gte: startDate,
-                },
+                timestamp: { gte: startDate },
             },
-            orderBy: {
-                timestamp: 'asc',
-            },
+            orderBy: { timestamp: 'asc' },
         });
 
-        return metrics.map(m => ({
-            timestamp: m.timestamp,
-            value: m[metric] || 0,
+        return metrics.map((row) => ({
+            timestamp: row.timestamp,
+            value: readMetricField(row, metric),
         }));
     }
 
     async getRecentTransactions(limit: number = 50) {
-        return this.prisma.transaction.findMany({
-            take: limit,
-            orderBy: {
-                timestamp: 'desc',
-            },
+        const transactions = await this.prisma.transaction.findMany({
+            take: Math.min(200, Math.max(1, limit)),
+            orderBy: { timestamp: 'desc' },
             include: {
                 player: {
                     select: {
@@ -83,15 +82,23 @@ export class EconomyService {
                 },
             },
         });
+
+        return transactions.map((tx) => ({
+            ...tx,
+            description: extractDescription(tx.metadata),
+        }));
     }
 
     async getPlayerTransactions(playerId: number, limit: number = 50) {
-        return this.prisma.transaction.findMany({
+        const transactions = await this.prisma.transaction.findMany({
             where: { playerId },
-            take: limit,
-            orderBy: {
-                timestamp: 'desc',
-            },
+            take: Math.min(200, Math.max(1, limit)),
+            orderBy: { timestamp: 'desc' },
         });
+
+        return transactions.map((tx) => ({
+            ...tx,
+            description: extractDescription(tx.metadata),
+        }));
     }
 }

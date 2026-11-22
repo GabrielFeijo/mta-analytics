@@ -1,62 +1,58 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, ParseIntPipe, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { AnalyticsService } from './analytics.service';
+import { HeatmapQueryDto, HoursQueryDto, LimitQueryDto } from './dto/analytics-query.dto';
 
 @Controller('analytics')
 @UseGuards(JwtAuthGuard)
 export class AnalyticsController {
-	constructor(private analyticsService: AnalyticsService) { }
+    constructor(private readonly analyticsService: AnalyticsService) {}
 
-	@Get('dashboard')
-	async getDashboardStats() {
-		return this.analyticsService.getInitialDashboardData();
-	}
+    @Get('dashboard')
+    async getDashboardStats() {
+        return this.analyticsService.getInitialDashboardData();
+    }
 
-	@Get('overview')
-	async getOverviewStats() {
-		return this.analyticsService.getOverviewStats();
-	}
+    @Get('server-status')
+    async getServerStatus() {
+        return this.analyticsService.getServerStatus();
+    }
 
-	@Get('heatmap')
-	async getHeatmapData(
-		@Query('eventType') eventType: string,
-		@Query('startDate') startDate: string,
-		@Query('endDate') endDate: string,
-	) {
-		return this.analyticsService.getHeatmapData({
-			eventType,
-			startDate: new Date(startDate),
-			endDate: new Date(endDate),
-		});
-	}
+    @Get('overview')
+    async getOverviewStats() {
+        return this.analyticsService.getOverviewStats();
+    }
 
-	@Get('events/recent')
-	async getRecentEvents(@Query('limit') limit?: string) {
-		const limitNum = limit ? parseInt(limit) : 50;
-		return this.analyticsService.getRecentEvents(limitNum);
-	}
+    @Get('heatmap')
+    async getHeatmapData(@Query() query: HeatmapQueryDto) {
+        return this.analyticsService.getHeatmapData({
+            eventType: query.eventType,
+            startDate: new Date(query.startDate),
+            endDate: new Date(query.endDate),
+            gridSize: query.gridSize,
+        });
+    }
 
-	@Get('players/:id/activity')
-	async getPlayerActivity(
-		@Query('id') id: string,
-		@Query('hours') hours?: string,
-	) {
-		const hoursNum = hours ? parseInt(hours) : 24;
-		return this.analyticsService.getPlayerActivityTimeline(
-			parseInt(id),
-			hoursNum,
-		);
-	}
+    @Get('events/recent')
+    async getRecentEvents(@Query() query: LimitQueryDto) {
+        return this.analyticsService.getRecentEvents(query.limit ?? 50);
+    }
 
-	@Get('resources')
-	async getResourceStats(@Query('hours') hours?: string) {
-		const hoursNum = hours ? parseInt(hours) : 24;
-		return this.analyticsService.getResourceStats(hoursNum);
-	}
+    @Get('players/:id/activity')
+    async getPlayerActivity(
+        @Param('id', ParseIntPipe) id: number,
+        @Query() query: HoursQueryDto,
+    ) {
+        return this.analyticsService.getPlayerActivityTimeline(id, query.hours ?? 24);
+    }
 
-	@Get('fines')
-	async getFinesStats(@Query('hours') hours?: string) {
-		const hoursNum = hours ? parseInt(hours) : 24;
-		return this.analyticsService.getFinesStats(hoursNum);
-	}
+    @Get('resources')
+    async getResourceStats(@Query() query: HoursQueryDto) {
+        return this.analyticsService.getResourceStats(query.hours ?? 24);
+    }
+
+    @Get('fines')
+    async getFinesStats(@Query() query: HoursQueryDto) {
+        return this.analyticsService.getFinesStats(query.hours ?? 24);
+    }
 }

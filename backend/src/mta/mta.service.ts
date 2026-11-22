@@ -1,52 +1,84 @@
 import { Injectable } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
-import { Queue } from 'bull';
-import { PrismaService } from '../database/prisma.service';
+import { JobOptions, Queue } from 'bull';
 import { RedisService } from '../database/redis.service';
-import { PlayerEventZod } from './dto/player-event.dto';
+import { PlayerEventPayload } from './dto/player-event.dto';
+import { HeartbeatDto } from './dto/heartbeat.dto';
+
+const EVENT_JOB_OPTIONS: JobOptions = {
+    attempts: 3,
+    backoff: {
+        type: 'exponential',
+        delay: 2000,
+    },
+    removeOnComplete: 500,
+    removeOnFail: 200,
+};
 
 @Injectable()
 export class MtaService {
     constructor(
-        private prisma: PrismaService,
-        private redis: RedisService,
-        @InjectQueue('events') private eventsQueue: Queue,
-    ) { }
+        private readonly redis: RedisService,
+        @InjectQueue('events') private readonly eventsQueue: Queue,
+    ) {}
 
-    async processEvent(event: PlayerEventZod) {
-        await this.redis.lpush(
-            'recent_events',
-            JSON.stringify(event),
-        );
-        await this.redis.ltrim('recent_events', 0, 999);
+    async processEvent(event: PlayerEventPayload, serverId?: string): Promise<void> {
+        const enriched: PlayerEventPayload = {
+            ...event,
+            serverId: serverId ?? event.serverId,
+        };
 
-        await this.eventsQueue.add('process-event', event, {
-            attempts: 3,
-            backoff: {
-                type: 'exponential',
-                delay: 2000,
-            },
-        });
-
-        await this.updateRealTimeMetrics(event);
+        await this.recordRecentAndMetrics([enriched]);
+        await this.eventsQueue.add('process-event', enriched, EVENT_JOB_OPTIONS);
     }
 
-    async processBatchEvents(events: PlayerEventZod[]) {
-        const jobs = events.map(event => ({
+    async processBatchEvents(events: PlayerEventPayload[], serverId?: string): Promise<void> {
+        if (events.length === 0) {
+            return;
+        }
+
+        const enrichedEvents = events.map((event) => ({
+            ...event,
+            serverId: serverId ?? event.serverId,
+        }));
+
+        await this.recordRecentAndMetrics(enrichedEvents);
+
+        const jobs = enrichedEvents.map((event) => ({
             name: 'process-event',
             data: event,
+            opts: EVENT_JOB_OPTIONS,
         }));
 
         await this.eventsQueue.addBulk(jobs);
     }
 
-    async updateServerStatus(data: any) {
-        await this.redis.set('server:status', JSON.stringify(data), 'EX', 60);
+    async updateServerStatus(data: HeartbeatDto, serverId?: string): Promise<void> {
+        const statusPayload = JSON.stringify({
+            ...data,
+            serverId: serverId || 'default',
+            updatedAt: Date.now(),
+        });
+
+        const pipeline = this.redis.pipeline();
+        pipeline.setex('server:status', 90, statusPayload);
+        if (serverId) {
+            pipeline.setex(`server:status:${serverId}`, 90, statusPayload);
+        }
+        await pipeline.exec();
     }
 
-    private async updateRealTimeMetrics(event: PlayerEventZod) {
-        const key = `metrics:${event.eventType}:count`;
-        await this.redis.incr(key);
-        await this.redis.expire(key, 3600);
+    private async recordRecentAndMetrics(events: PlayerEventPayload[]): Promise<void> {
+        const pipeline = this.redis.pipeline();
+
+        for (const event of events) {
+            pipeline.lpush('recent_events', JSON.stringify(event));
+            const metricKey = `metrics:${event.eventType}:count`;
+            pipeline.incr(metricKey);
+            pipeline.expire(metricKey, 3600);
+        }
+
+        pipeline.ltrim('recent_events', 0, 999);
+        await pipeline.exec();
     }
 }

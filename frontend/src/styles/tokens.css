@@ -1,0 +1,21 @@
+:root {
+  --c-bg0: 15 16 18;
+  --c-bg1: 22 23 26;
+  --c-bg2: 30 32 36;
+  --c-bg3: 38 40 45;
+  --c-line: 44 46 51;
+  --c-line-strong: 61 64 70;
+  --c-ink: 236 232 220;
+  --c-ink-dim: 162 159 148;
+  --c-ink-faint: 107 105 95;
+  --c-signal: 217 72 47;
+  --c-signal-deep: 142 47 32;
+  --c-brass: 200 164 85;
+  --c-ok: 127 163 122;
+  --c-warn: 212 155 63;
+  --r-sm: 2px;
+  --r-md: 4px;
+  --font-ui: 'Inter Tight';
+  --font-mono: 'JetBrains Mono';
+  --font-display: 'Barlow Condensed';
+}

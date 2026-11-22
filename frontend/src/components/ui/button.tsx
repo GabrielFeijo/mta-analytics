@@ -1,56 +1,49 @@
-import * as React from "react"
-import { Slot } from "@radix-ui/react-slot"
-import { cva, type VariantProps } from "class-variance-authority"
+import * as React from 'react';
+import { cn } from '@/lib/cn';
 
-import { cn } from "@/lib/utils"
+export type ButtonVariant =
+  | 'default'
+  | 'destructive'
+  | 'outline'
+  | 'secondary'
+  | 'ghost'
+  | 'link';
 
-const buttonVariants = cva(
-    "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
-    {
-        variants: {
-            variant: {
-                default: "bg-primary text-primary-foreground hover:bg-primary/90",
-                destructive:
-                    "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-                outline:
-                    "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
-                secondary:
-                    "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-                ghost: "hover:bg-accent hover:text-accent-foreground",
-                link: "text-primary underline-offset-4 hover:underline",
-            },
-            size: {
-                default: "h-10 px-4 py-2",
-                sm: "h-9 rounded-md px-3",
-                lg: "h-11 rounded-md px-8",
-                icon: "h-10 w-10",
-            },
-        },
-        defaultVariants: {
-            variant: "default",
-            size: "default",
-        },
-    }
-)
+export type ButtonSize = 'default' | 'sm' | 'lg' | 'icon';
 
-export interface ButtonProps
-    extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
-    asChild?: boolean
+const VARIANT_CLASSES: Record<ButtonVariant, string> = {
+  default: 'border border-signal bg-signal text-ink hover:bg-signal/90',
+  destructive: 'border border-signal/50 bg-transparent text-signal hover:bg-signal/10',
+  outline: 'border border-line bg-bg2 text-ink hover:border-line-strong hover:bg-bg3',
+  secondary: 'border border-line bg-bg2 text-ink hover:border-line-strong hover:bg-bg3',
+  ghost: 'border border-transparent bg-transparent text-ink-dim hover:bg-bg2 hover:text-ink',
+  link: 'text-brass underline-offset-4 hover:underline',
+};
+
+const SIZE_CLASSES: Record<ButtonSize, string> = {
+  default: 'h-8 px-3 py-1.5 gap-2',
+  sm: 'h-7 px-2.5 text-xs gap-1.5',
+  lg: 'h-9 px-4 text-sm gap-2',
+  icon: 'h-7 w-7',
+};
+
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
 }
 
-const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-    ({ className, variant, size, asChild = false, ...props }, ref) => {
-        const Comp = asChild ? Slot : "button"
-        return (
-            <Comp
-                className={cn(buttonVariants({ variant, size, className }))}
-                ref={ref}
-                {...props}
-            />
-        )
-    }
-)
-Button.displayName = "Button"
-
-export { Button, buttonVariants }
+export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className, variant = 'default', size = 'default', ...props }, ref) => (
+    <button
+      ref={ref}
+      className={cn(
+        'inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-sm text-[13px] font-medium transition-colors focus-visible:outline-none disabled:pointer-events-none disabled:opacity-40',
+        VARIANT_CLASSES[variant],
+        SIZE_CLASSES[size],
+        className,
+      )}
+      {...props}
+    />
+  ),
+);
+Button.displayName = 'Button';

@@ -52,6 +52,7 @@ model Player {
 
   money         Float    @default(0)
   bank          Float    @default(0)
+  dirtyMoney    Float    @default(0)
   level         Int      @default(1)
   experience    Int      @default(0)
   job           String?
@@ -69,6 +70,7 @@ model Player {
   relationshipsB PlayerRelationship[] @relation("PlayerB")
 
   @@index([serial])
+  @@index([firstSeen])
   @@index([lastSeen])
   @@index([riskScore])
   @@map("players")
@@ -104,6 +106,7 @@ model Event {
 
   @@index([eventType, timestamp(sort: Desc)])
   @@index([playerId, timestamp(sort: Desc)])
+  @@index([serverId, timestamp(sort: Desc)])
   @@index([timestamp(sort: Desc)])
   @@map("events")
 }
@@ -122,6 +125,7 @@ model Transaction {
 
   @@index([playerId, timestamp(sort: Desc)])
   @@index([type, timestamp(sort: Desc)])
+  @@index([source, timestamp(sort: Desc)])
   @@map("transactions")
 }
 
