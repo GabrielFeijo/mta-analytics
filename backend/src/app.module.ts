@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { BullModule } from '@nestjs/bull';
+import { validateEnvironment } from './common/config/env.validation';
 import { DatabaseModule } from './database/database.module';
+import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { MtaModule } from './mta/mta.module';
@@ -13,15 +15,21 @@ import { EconomyModule } from './economy/economy.module';
         ConfigModule.forRoot({
             isGlobal: true,
             envFilePath: '.env',
+            validate: validateEnvironment,
         }),
-        BullModule.forRoot({
-            redis: {
-                host: process.env.REDIS_HOST || 'localhost',
-                port: parseInt(process.env.REDIS_PORT || '6379', 10) || 6379,
-                password: process.env.REDIS_PASSWORD || undefined,
-            },
+        BullModule.forRootAsync({
+            imports: [ConfigModule],
+            inject: [ConfigService],
+            useFactory: (configService: ConfigService) => ({
+                redis: {
+                    host: configService.get<string>('REDIS_HOST') || 'localhost',
+                    port: parseInt(configService.get<string>('REDIS_PORT') || '6379', 10) || 6379,
+                    password: configService.get<string>('REDIS_PASSWORD') || undefined,
+                },
+            }),
         }),
         DatabaseModule,
+        HealthModule,
         AuthModule,
         AnalyticsModule,
         MtaModule,

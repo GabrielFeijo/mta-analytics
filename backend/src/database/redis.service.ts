@@ -1,9 +1,17 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 
+const ATOMIC_INCR_WITH_TTL_LUA = `
+local current = redis.call('INCR', KEYS[1])
+if current == 1 or redis.call('TTL', KEYS[1]) == -1 then
+    redis.call('EXPIRE', KEYS[1], tonumber(ARGV[1]))
+end
+return current
+`;
+
 @Injectable()
-export class RedisService implements OnModuleInit, OnModuleDestroy {
+export class RedisService implements OnModuleDestroy {
     private readonly logger = new Logger(RedisService.name);
     private readonly client: Redis;
 
@@ -16,9 +24,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
             port,
             password: password || undefined,
         });
-    }
 
-    async onModuleInit(): Promise<void> {
         this.client.on('connect', () => {
             this.logger.log('Connected to Redis');
         });
@@ -33,6 +39,10 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
         this.logger.log('Disconnected from Redis');
     }
 
+    async ping(): Promise<string> {
+        return this.client.ping();
+    }
+
     async get(key: string): Promise<string | null> {
         return this.client.get(key);
     }
@@ -43,6 +53,11 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
             return;
         }
         await this.client.set(key, value);
+    }
+
+    async setNxEx(key: string, value: string, ttlSeconds: number): Promise<boolean> {
+        const result = await this.client.set(key, value, 'EX', ttlSeconds, 'NX');
+        return result === 'OK';
     }
 
     async exists(key: string): Promise<boolean> {
@@ -62,16 +77,9 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
         await this.client.expire(key, seconds);
     }
 
-    async lpush(key: string, value: string): Promise<void> {
-        await this.client.lpush(key, value);
-    }
-
-    async ltrim(key: string, start: number, stop: number): Promise<void> {
-        await this.client.ltrim(key, start, stop);
-    }
-
-    async lrange(key: string, start: number, stop: number): Promise<string[]> {
-        return this.client.lrange(key, start, stop);
+    async incrementWithTtl(key: string, ttlSeconds: number): Promise<number> {
+        const result = await this.client.eval(ATOMIC_INCR_WITH_TTL_LUA, 1, key, ttlSeconds);
+        return Number(result);
     }
 
     pipeline() {

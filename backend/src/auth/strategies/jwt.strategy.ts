@@ -19,11 +19,19 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         });
     }
 
-    async validate(req: Request, payload: AuthJwtPayload) {
+    async validate(req: Request, _payload: AuthJwtPayload) {
         const token = ExtractJwt.fromAuthHeaderAsBearerToken()(req);
-        if (!token || (await this.authService.isTokenRevoked(token))) {
+        if (!token) {
+            throw new UnauthorizedException('Missing authentication token');
+        }
+        const session = await this.authService.resolveActiveSession(token);
+        if (!session) {
             throw new UnauthorizedException('Token revoked or session expired');
         }
-        return { userId: payload.sub, username: payload.username, role: payload.role };
+        return {
+            userId: session.userId,
+            username: session.username,
+            role: session.role,
+        };
     }
 }

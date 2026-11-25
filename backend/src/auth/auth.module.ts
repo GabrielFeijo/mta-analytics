@@ -5,7 +5,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
-import { RateLimitGuard } from '../common/guards/rate-limit.guard';
 
 @Module({
     imports: [
@@ -20,7 +19,7 @@ import { RateLimitGuard } from '../common/guards/rate-limit.guard';
         }),
     ],
     controllers: [AuthController],
-    providers: [AuthService, JwtStrategy, RateLimitGuard],
+    providers: [AuthService, JwtStrategy],
     exports: [AuthService, JwtModule],
 })
 export class AuthModule {}
