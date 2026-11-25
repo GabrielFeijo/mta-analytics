@@ -9,8 +9,8 @@
     <script src="server/core/queue.lua" type="server" />
     <script src="server/core/request.lua" type="server" />
 
-    <script src="server/collectors/player-events.lua" type="server" />
     <script src="server/collectors/combat-events.lua" type="server" />
+    <script src="server/collectors/player-events.lua" type="server" />
     <script src="server/collectors/player-details.lua" type="server" />
 
     <script src="server/core/exports.lua" type="server" />

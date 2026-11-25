@@ -12,6 +12,7 @@ pnpm-debug.log*
 .env
 .env.local
 .env.*.local
+mta_analytics_resource/server/secrets.json
 
 # Logs
 logs/

@@ -1,5 +1,19 @@
 MtaAnalyticsUtils = {}
 
+local lastNowMs = 0
+
+function MtaAnalyticsUtils.isFiniteNumber(value)
+    return type(value) == "number" and value == value and value ~= math.huge and value ~= -math.huge
+end
+
+function MtaAnalyticsUtils.formatTimestamp(ms)
+    local numeric = tonumber(ms) or 0
+    if not MtaAnalyticsUtils.isFiniteNumber(numeric) or numeric < 0 then
+        numeric = 0
+    end
+    return string.format("%.0f", numeric)
+end
+
 function MtaAnalyticsUtils.stripHex(text)
     if type(text) ~= "string" then
         return ""
@@ -27,11 +41,34 @@ end
 
 function MtaAnalyticsUtils.nowMs()
     local rt = getRealTime()
-    return (rt and rt.timestamp or 0) * 1000
+    local subMs = type(getTickCount) == "function" and (getTickCount() % 1000) or 0
+    local ms = (rt and rt.timestamp or 0) * 1000 + subMs
+    if ms <= lastNowMs then
+        ms = lastNowMs + 1
+    end
+    lastNowMs = ms
+    return ms
 end
 
 function MtaAnalyticsUtils.isValidPlayer(player)
     return player ~= nil and isElement(player) and getElementType(player) == "player"
+end
+
+function MtaAnalyticsUtils.resolvePlayerFromAttacker(attacker)
+    if MtaAnalyticsUtils.isValidPlayer(attacker) then
+        return attacker
+    end
+    if attacker ~= nil and isElement(attacker) and getElementType(attacker) == "vehicle" then
+        local driver = getVehicleController(attacker)
+        if MtaAnalyticsUtils.isValidPlayer(driver) then
+            return driver
+        end
+    end
+    return nil
+end
+
+function MtaAnalyticsUtils.hasLoadedCharacter(player)
+    return MtaAnalyticsUtils.safeElementData(player, Config.ElementDataKeys.charId, nil) ~= nil
 end
 
 function MtaAnalyticsUtils.safeElementData(element, key, fallback)
@@ -83,6 +120,9 @@ function MtaAnalyticsUtils.buildPlayerEvent(eventType, player, data)
         for k, v in pairs(data) do
             payloadData[k] = v
         end
+    end
+    if type(payloadData.message) == "string" and #payloadData.message > 500 then
+        payloadData.message = string.sub(payloadData.message, 1, 500)
     end
     if charId and payloadData.id == nil then
         payloadData.id = charId

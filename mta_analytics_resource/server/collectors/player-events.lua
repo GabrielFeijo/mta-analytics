@@ -16,10 +16,12 @@ addEventHandler("onPlayerQuit", root, function(quitType, reason)
         return
     end
 
-    local snapshot = MtaAnalyticsUtils.buildPlayerSnapshot(source)
-    snapshot.quitType = tostring(quitType or "Unknown")
-    snapshot.reason = reason and tostring(reason) or nil
-    local event = MtaAnalyticsUtils.buildPlayerEvent("player_quit", source, snapshot)
+    local quitData = MtaAnalyticsUtils.hasLoadedCharacter(source)
+        and MtaAnalyticsUtils.buildPlayerSnapshot(source)
+        or {}
+    quitData.quitType = tostring(quitType or "Unknown")
+    quitData.reason = reason and tostring(reason) or nil
+    local event = MtaAnalyticsUtils.buildPlayerEvent("player_quit", source, quitData)
     MtaAnalyticsQueue.add(event)
 end)
 
@@ -41,9 +43,10 @@ addEventHandler("onPlayerWasted", root, function(_, killer, killerWeapon, bodypa
 
     local killerName = "Ambiente"
     local killerSerial = nil
-    if MtaAnalyticsUtils.isValidPlayer(killer) then
-        killerName = MtaAnalyticsUtils.stripHex(getPlayerName(killer))
-        killerSerial = getPlayerSerial(killer)
+    local killerPlayer = MtaAnalyticsUtils.resolvePlayerFromAttacker(killer)
+    if killerPlayer then
+        killerName = MtaAnalyticsUtils.stripHex(getPlayerName(killerPlayer))
+        killerSerial = getPlayerSerial(killerPlayer)
     end
 
     local event = MtaAnalyticsUtils.buildPlayerEvent("player_wasted", source, {

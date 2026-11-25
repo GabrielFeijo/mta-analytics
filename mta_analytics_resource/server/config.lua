@@ -1,10 +1,79 @@
 Config = {}
 
+local function readSetting(name, fallback)
+    if type(get) ~= "function" then
+        return fallback
+    end
+    local value = get(name)
+    if value == nil or value == false or value == "" then
+        return fallback
+    end
+    return value
+end
+
+local function readBoolSetting(name, fallback)
+    if type(get) ~= "function" then
+        return fallback
+    end
+    local value = get(name)
+    if type(value) == "string" then
+        if value == "true" then
+            return true
+        end
+        if value == "false" then
+            return false
+        end
+    elseif value == true then
+        return true
+    end
+    return fallback
+end
+
+local function loadLocalSecrets()
+    if type(fileExists) ~= "function" or not fileExists("server/secrets.json") then
+        return {}
+    end
+    local handle = fileOpen("server/secrets.json", true)
+    if not handle then
+        return {}
+    end
+    local size = fileGetSize(handle)
+    local raw = size > 0 and fileRead(handle, size) or ""
+    fileClose(handle)
+
+    if type(raw) ~= "string" or raw == "" or type(fromJSON) ~= "function" then
+        return {}
+    end
+
+    local parsed = fromJSON(raw)
+    if type(parsed) ~= "table" then
+        return {}
+    end
+    if type(parsed[1]) == "table" and not parsed.apiSecret and not parsed.apiKey then
+        parsed = parsed[1]
+    end
+    return parsed
+end
+
+local localSecrets = loadLocalSecrets()
+
+local function readConfigValue(settingName, secretKey, fallback)
+    local fromSetting = readSetting(settingName, nil)
+    if fromSetting ~= nil then
+        return fromSetting
+    end
+    local fromFile = localSecrets[secretKey]
+    if fromFile ~= nil and fromFile ~= false and fromFile ~= "" then
+        return fromFile
+    end
+    return fallback
+end
+
 -- Configuração de conexão HTTP com o backend NestJS do MTA Analytics (server-only)
 Config.API = {
-    url = "http://127.0.0.1:3000/api/mta", -- Endpoint base da API de ingestão
-    key = "mta-server-key-1", -- Chave do servidor cadastrada em MTA_API_KEYS
-    secret = "your-super-secret-hmac-key-change-this-in-production", -- Segredo compartilhado em MTA_SECRET
+    url = tostring(readConfigValue("apiUrl", "apiUrl", "http://127.0.0.1:3000/api/mta")), -- Endpoint base da API de ingestão
+    key = tostring(readConfigValue("apiKey", "apiKey", "mta-server-key-1")), -- Chave do servidor cadastrada em MTA_API_KEYS
+    secret = tostring(readConfigValue("apiSecret", "apiSecret", "your-super-secret-hmac-key-change-this-in-production")), -- Segredo compartilhado em MTA_SECRET
     timeoutMs = 7000, -- Timeout de requisição HTTP em milissegundos
 }
 
@@ -61,4 +130,11 @@ Config.Collectors = {
 }
 
 -- Logs de diagnóstico no console do servidor (outputDebugString)
-Config.Debug = false
+Config.Debug = readBoolSetting("debug", false)
+
+if tostring(Config.API.secret):find("change-this", 1, true) then
+    outputDebugString(
+        "[mta_analytics_resource] AVISO: usando MTA_SECRET padrão. Configure apiSecret no meta.xml/settings.xml.",
+        2
+    )
+end

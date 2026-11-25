@@ -16,9 +16,15 @@ function MtaAnalyticsPlayerDetails.syncAll()
 end
 
 addEventHandler("onPlayerLogin", root, function()
+    if not Config.Collectors.PLAYER_STATUS_SYNC then
+        return
+    end
     local loggedPlayer = source
     setTimer(function()
         if not MtaAnalyticsUtils.isValidPlayer(loggedPlayer) then
+            return
+        end
+        if not MtaAnalyticsUtils.hasLoadedCharacter(loggedPlayer) then
             return
         end
         local snapshot = MtaAnalyticsUtils.buildPlayerSnapshot(loggedPlayer)

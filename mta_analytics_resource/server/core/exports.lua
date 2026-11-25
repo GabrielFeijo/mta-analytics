@@ -4,7 +4,7 @@ function logTransaction(player, transType, amount, description)
     end
 
     local numericAmount = tonumber(amount)
-    if not numericAmount then
+    if not MtaAnalyticsUtils.isFiniteNumber(numericAmount) or numericAmount == 0 then
         return false
     end
 
@@ -31,14 +31,16 @@ function logMoneyChange(player, amount, newBalance, changeSource)
     end
 
     local numericAmount = tonumber(amount)
-    if not numericAmount or numericAmount == 0 then
+    if not MtaAnalyticsUtils.isFiniteNumber(numericAmount) or numericAmount == 0 then
         return false
     end
 
+    local parsedBalance = tonumber(newBalance)
+    local safeBalance = MtaAnalyticsUtils.isFiniteNumber(parsedBalance) and parsedBalance or 0
     local callerName = sourceResource and getResourceName(sourceResource) or "unknown"
     local event = MtaAnalyticsUtils.buildPlayerEvent("player_money_change", player, {
         amount = numericAmount,
-        newBalance = tonumber(newBalance) or 0,
+        newBalance = safeBalance,
         source = tostring(changeSource or callerName),
         source_resource = callerName,
     })
@@ -52,8 +54,13 @@ function logVehiclePurchase(player, model, price, paymentMethod)
     end
 
     local modelId = tonumber(model) or 0
-    local numericPrice = tonumber(price) or 0
+    local numericPrice = tonumber(price)
+    if not MtaAnalyticsUtils.isFiniteNumber(numericPrice) or numericPrice <= 0 then
+        return false
+    end
+
     local callerName = sourceResource and getResourceName(sourceResource) or "unknown"
+    local snapshot = MtaAnalyticsUtils.buildPlayerSnapshot(player)
 
     local event = MtaAnalyticsUtils.buildPlayerEvent("vehicle_purchase", player, {
         model = modelId,
@@ -61,6 +68,8 @@ function logVehiclePurchase(player, model, price, paymentMethod)
         paymentMethod = tostring(paymentMethod or "money"),
         vehicleName = (modelId > 0 and getVehicleNameFromModel(modelId)) or "Unknown",
         source_resource = callerName,
+        money = snapshot.money,
+        bank = snapshot.bank,
     })
 
     return MtaAnalyticsQueue.add(event)
@@ -71,12 +80,20 @@ function logFine(player, amount, reason, plate)
         return false
     end
 
+    local numericAmount = tonumber(amount)
+    if not MtaAnalyticsUtils.isFiniteNumber(numericAmount) or numericAmount <= 0 then
+        return false
+    end
+
     local callerName = sourceResource and getResourceName(sourceResource) or "unknown"
+    local snapshot = MtaAnalyticsUtils.buildPlayerSnapshot(player)
     local event = MtaAnalyticsUtils.buildPlayerEvent("fine_issued", player, {
-        amount = tonumber(amount) or 0,
+        amount = numericAmount,
         reason = tostring(reason or "Infração de trânsito"),
         plate = tostring(plate or "SEM-PLACA"),
         source_resource = callerName,
+        money = snapshot.money,
+        bank = snapshot.bank,
     })
 
     return MtaAnalyticsQueue.add(event)

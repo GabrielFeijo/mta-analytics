@@ -57,9 +57,10 @@ addEventHandler("onPlayerDamage", root, function(attacker, weapon, bodypart, los
 
     local attackerName = "Ambiente"
     local attackerSerial = nil
-    if MtaAnalyticsUtils.isValidPlayer(attacker) then
-        attackerName = MtaAnalyticsUtils.stripHex(getPlayerName(attacker))
-        attackerSerial = getPlayerSerial(attacker)
+    local attackerPlayer = MtaAnalyticsUtils.resolvePlayerFromAttacker(attacker)
+    if attackerPlayer then
+        attackerName = MtaAnalyticsUtils.stripHex(getPlayerName(attackerPlayer))
+        attackerSerial = getPlayerSerial(attackerPlayer)
     end
 
     local victimSerial = getPlayerSerial(source) or tostring(source)

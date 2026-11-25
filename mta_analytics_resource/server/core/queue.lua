@@ -4,12 +4,23 @@ MtaAnalyticsQueue.timer = nil
 MtaAnalyticsQueue.totalQueued = 0
 MtaAnalyticsQueue.totalDropped = 0
 
+local MAX_BACKEND_BATCH_SIZE = 200
+local MAX_FORCE_FLUSH_BATCHES = 3
+
 local function trimBufferIfNeeded()
     local maxSize = Config.Queue.maxBufferSize or 500
-    while #MtaAnalyticsQueue.events > maxSize do
-        table.remove(MtaAnalyticsQueue.events, 1)
-        MtaAnalyticsQueue.totalDropped = MtaAnalyticsQueue.totalDropped + 1
+    local total = #MtaAnalyticsQueue.events
+    if total <= maxSize then
+        return
     end
+
+    local overflow = total - maxSize
+    local kept = {}
+    for i = overflow + 1, total do
+        kept[#kept + 1] = MtaAnalyticsQueue.events[i]
+    end
+    MtaAnalyticsQueue.events = kept
+    MtaAnalyticsQueue.totalDropped = MtaAnalyticsQueue.totalDropped + overflow
 end
 
 function MtaAnalyticsQueue.recordDropped(count)
@@ -24,7 +35,7 @@ function MtaAnalyticsQueue.add(event)
         return false
     end
 
-    table.insert(MtaAnalyticsQueue.events, event)
+    MtaAnalyticsQueue.events[#MtaAnalyticsQueue.events + 1] = event
     MtaAnalyticsQueue.totalQueued = MtaAnalyticsQueue.totalQueued + 1
     trimBufferIfNeeded()
 
@@ -42,9 +53,17 @@ function MtaAnalyticsQueue.requeueBatch(failedEvents)
     if type(failedEvents) ~= "table" or #failedEvents == 0 then
         return
     end
-    for i = #failedEvents, 1, -1 do
-        table.insert(MtaAnalyticsQueue.events, 1, failedEvents[i])
+
+    local merged = {}
+    for i = 1, #failedEvents do
+        merged[i] = failedEvents[i]
     end
+    local existing = MtaAnalyticsQueue.events
+    local offset = #merged
+    for i = 1, #existing do
+        merged[offset + i] = existing[i]
+    end
+    MtaAnalyticsQueue.events = merged
     trimBufferIfNeeded()
 end
 
@@ -52,21 +71,37 @@ function MtaAnalyticsQueue.flush(forceFlush)
     if #MtaAnalyticsQueue.events == 0 then
         return false
     end
-    if MtaAnalyticsRequest and not MtaAnalyticsRequest.canDispatch(forceFlush) then
-        return false
+
+    local maxIterations = forceFlush and MAX_FORCE_FLUSH_BATCHES or 1
+    local dispatched = false
+
+    for _ = 1, maxIterations do
+        local total = #MtaAnalyticsQueue.events
+        if total == 0 then
+            break
+        end
+        if MtaAnalyticsRequest and not MtaAnalyticsRequest.canDispatch(forceFlush) then
+            break
+        end
+
+        local configuredMax = math.min((Config.Queue.batchSize or 15) * 4, MAX_BACKEND_BATCH_SIZE)
+        local batchLimit = math.min(total, math.max(1, configuredMax))
+        local batch = {}
+        local remaining = {}
+
+        for i = 1, batchLimit do
+            batch[i] = MtaAnalyticsQueue.events[i]
+        end
+        for i = batchLimit + 1, total do
+            remaining[#remaining + 1] = MtaAnalyticsQueue.events[i]
+        end
+        MtaAnalyticsQueue.events = remaining
+
+        MtaAnalyticsRequest.sendBatch(batch, forceFlush)
+        dispatched = true
     end
 
-    local batchLimit = math.min(#MtaAnalyticsQueue.events, (Config.Queue.batchSize or 15) * 4)
-    local batch = {}
-    for i = 1, batchLimit do
-        batch[i] = MtaAnalyticsQueue.events[i]
-    end
-    for _ = 1, batchLimit do
-        table.remove(MtaAnalyticsQueue.events, 1)
-    end
-
-    MtaAnalyticsRequest.sendBatch(batch)
-    return true
+    return dispatched
 end
 
 function MtaAnalyticsQueue.startTimer()

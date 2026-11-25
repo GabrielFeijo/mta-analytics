@@ -9,6 +9,7 @@ local consecutiveFailures = 0
 local tripCount = 0
 local circuitOpenedAt = 0
 local inFlightRequests = 0
+local heartbeatInFlight = false
 
 local function getCurrentCooldownMs()
     local baseCooldown = Config.CircuitBreaker.cooldownMs or 30000
@@ -55,7 +56,7 @@ function MtaAnalyticsRequest.getStatus()
 end
 
 local function buildRequestOptions(payloadTable)
-    local timestamp = tostring(MtaAnalyticsUtils.nowMs())
+    local timestamp = MtaAnalyticsUtils.formatTimestamp(MtaAnalyticsUtils.nowMs())
     local body = MtaAnalyticsUtils.encodeJsonObject(payloadTable)
     local hmacSignature = MtaAnalyticsCrypto.signRequest(timestamp, body, Config.API.secret)
 
@@ -74,10 +75,17 @@ local function buildRequestOptions(payloadTable)
 end
 
 local function isRecoverableFailure(responseInfo)
-    if not responseInfo or not responseInfo.success then
+    if type(responseInfo) ~= "table" then
         return true
     end
     local statusCode = tonumber(responseInfo.statusCode) or 0
+    -- Erros 4xx (exceto 429 Too Many Requests) são permanentes: descartar o lote
+    if statusCode >= 400 and statusCode < 500 and statusCode ~= 429 then
+        return false
+    end
+    if not responseInfo.success then
+        return true
+    end
     return statusCode == 0 or statusCode == 429 or statusCode >= 500
 end
 
@@ -116,35 +124,7 @@ local function handleApiOutcome(isSuccess, recoverable, operationName, statusCod
     end
 end
 
-function MtaAnalyticsRequest.sendEvent(event)
-    if type(event) ~= "table" then
-        return
-    end
-    if not MtaAnalyticsRequest.canDispatch(false) then
-        MtaAnalyticsQueue.add(event)
-        return
-    end
-
-    inFlightRequests = inFlightRequests + 1
-    local options = buildRequestOptions(event)
-    fetchRemote(Config.API.url .. "/event", options, function(_, responseInfo)
-        inFlightRequests = math.max(0, inFlightRequests - 1)
-        local statusCode = responseInfo and tonumber(responseInfo.statusCode) or 0
-        local ok = responseInfo and responseInfo.success and statusCode >= 200 and statusCode < 400
-        local recoverable = isRecoverableFailure(responseInfo)
-
-        handleApiOutcome(ok, recoverable, "sendEvent", statusCode)
-        if not ok then
-            if recoverable then
-                MtaAnalyticsQueue.requeueBatch({ event })
-            else
-                MtaAnalyticsQueue.recordDropped(1)
-            end
-        end
-    end)
-end
-
-function MtaAnalyticsRequest.sendBatch(events)
+function MtaAnalyticsRequest.sendBatch(events, skipAutoFlush)
     if type(events) ~= "table" or #events == 0 then
         return
     end
@@ -160,7 +140,7 @@ function MtaAnalyticsRequest.sendBatch(events)
         handleApiOutcome(ok, recoverable, "sendBatch", statusCode)
         if ok then
             MtaAnalyticsUtils.debugLog("Lote enviado com sucesso (" .. tostring(#events) .. " eventos).")
-            if MtaAnalyticsQueue and #MtaAnalyticsQueue.events >= (Config.Queue.batchSize or 15) then
+            if not skipAutoFlush and MtaAnalyticsQueue and #MtaAnalyticsQueue.events >= (Config.Queue.batchSize or 15) then
                 MtaAnalyticsQueue.flush(false)
             end
             return
@@ -176,10 +156,14 @@ end
 
 function MtaAnalyticsRequest.sendHeartbeat()
     refreshCircuitState()
-    if circuitState == STATE_OPEN then
+    if circuitState == STATE_OPEN or heartbeatInFlight then
+        return
+    end
+    if circuitState == STATE_HALF_OPEN and inFlightRequests > 0 then
         return
     end
 
+    heartbeatInFlight = true
     local payload = {
         playerCount = getPlayerCount(),
         maxPlayers = getMaxPlayers(),
@@ -190,6 +174,7 @@ function MtaAnalyticsRequest.sendHeartbeat()
 
     local options = buildRequestOptions(payload)
     fetchRemote(Config.API.url .. "/heartbeat", options, function(_, responseInfo)
+        heartbeatInFlight = false
         local statusCode = responseInfo and tonumber(responseInfo.statusCode) or 0
         local ok = responseInfo and responseInfo.success and statusCode >= 200 and statusCode < 400
         local recoverable = isRecoverableFailure(responseInfo)

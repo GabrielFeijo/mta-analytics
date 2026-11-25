@@ -31,10 +31,16 @@ function MtaAnalyticsCrypto.sha256(message)
     return string.lower(hash("sha256", tostring(message or "")))
 end
 
-function MtaAnalyticsCrypto.hmacSha256(secretKey, message)
-    local key = tostring(secretKey or Config.API.secret or "")
-    local msg = tostring(message or "")
+local cachedRawKey = nil
+local cachedIpad = nil
+local cachedOpad = nil
 
+local function resolveKeyPads(rawKey)
+    if rawKey == cachedRawKey and cachedIpad and cachedOpad then
+        return cachedIpad, cachedOpad
+    end
+
+    local key = rawKey
     if #key > BLOCK_SIZE then
         key = hexToBytes(MtaAnalyticsCrypto.sha256(key))
     end
@@ -50,8 +56,19 @@ function MtaAnalyticsCrypto.hmacSha256(secretKey, message)
         opadBytes[i] = string.char(xorByte(b, 0x5c))
     end
 
-    local innerHex = MtaAnalyticsCrypto.sha256(table.concat(ipadBytes) .. msg)
-    return MtaAnalyticsCrypto.sha256(table.concat(opadBytes) .. hexToBytes(innerHex))
+    cachedRawKey = rawKey
+    cachedIpad = table.concat(ipadBytes)
+    cachedOpad = table.concat(opadBytes)
+    return cachedIpad, cachedOpad
+end
+
+function MtaAnalyticsCrypto.hmacSha256(secretKey, message)
+    local rawKey = tostring(secretKey or Config.API.secret or "")
+    local msg = tostring(message or "")
+    local ipadStr, opadStr = resolveKeyPads(rawKey)
+
+    local innerHex = MtaAnalyticsCrypto.sha256(ipadStr .. msg)
+    return MtaAnalyticsCrypto.sha256(opadStr .. hexToBytes(innerHex))
 end
 
 function MtaAnalyticsCrypto.signRequest(timestamp, body, secretKey)
