@@ -32,6 +32,32 @@ describe('HeatmapAnalyticsService', () => {
         );
     });
 
+    it('rejects reversed or oversized date ranges with BadRequestException', async () => {
+        const fakePrisma = {} as PrismaService;
+        const service = new HeatmapAnalyticsService(fakePrisma);
+        const now = Date.now();
+
+        await assert.rejects(
+            () =>
+                service.getHeatmapData({
+                    eventType: 'player_position',
+                    startDate: new Date(now),
+                    endDate: new Date(now - 60_000),
+                }),
+            BadRequestException,
+        );
+
+        await assert.rejects(
+            () =>
+                service.getHeatmapData({
+                    eventType: 'player_position',
+                    startDate: new Date(now - 35 * 86_400_000),
+                    endDate: new Date(now),
+                }),
+            BadRequestException,
+        );
+    });
+
     it('returns empty array when no events match the layer', async () => {
         const fakePrisma = {
             $queryRaw: async () => [],

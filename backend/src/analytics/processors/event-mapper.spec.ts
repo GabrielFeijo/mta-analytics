@@ -4,7 +4,10 @@ import {
     buildTransactionInput,
     extractPlayerMetrics,
     isEconomicEvent,
+    isNoisyStreamEvent,
     isSocialEvent,
+    resolveSocialRelationType,
+    shouldApplyPlayerMetrics,
 } from './event-mapper';
 
 describe('event-mapper', () => {
@@ -40,7 +43,7 @@ describe('event-mapper', () => {
         });
     });
 
-    it('maps player_transaction types accurately', () => {
+    it('maps player_transaction types accurately and rejects zero/invalid amounts', () => {
         const earnRace = buildTransactionInput(
             {
                 eventType: 'player_transaction',
@@ -49,6 +52,7 @@ describe('event-mapper', () => {
                 data: {
                     type: 'race_dirty_earn',
                     amount: 45000,
+                    dirtyMoney: 75000,
                     money: 120000,
                     source_resource: 'mta_racing',
                 },
@@ -60,32 +64,46 @@ describe('event-mapper', () => {
         assert.equal(earnRace.playerId, 7);
         assert.equal(earnRace.type, 'EARN');
         assert.equal(earnRace.amount, 45000);
+        assert.equal(earnRace.balance, 75000);
         assert.equal(earnRace.source, 'mta_racing');
 
-        const deposit = buildTransactionInput(
+        const zeroTx = buildTransactionInput(
             {
-                eventType: 'player_transaction',
+                eventType: 'vehicle_purchase',
                 playerSerial: 'ABC',
                 playerName: 'Pilot',
-                data: {
-                    type: 'deposit',
-                    amount: 10000,
-                    money: 5000,
-                },
+                data: { price: 0 },
             },
             7,
         );
-
-        assert.ok(deposit);
-        assert.equal(deposit.type, 'TRANSFER_OUT');
-        assert.equal(deposit.source, 'bank');
+        assert.equal(zeroTx, null);
     });
 
-    it('identifies social and economic event classes', () => {
+    it('prevents uninitialized character snapshots from zeroing persisted wealth', () => {
+        assert.equal(
+            shouldApplyPlayerMetrics('initial_player_sync', { money: 0, bank: 0, level: 1 }),
+            false,
+        );
+        assert.equal(
+            shouldApplyPlayerMetrics('initial_player_sync', { id: 12, money: 0, bank: 0, level: 1 }),
+            true,
+        );
+        assert.equal(
+            shouldApplyPlayerMetrics('player_status_sync', { money: 0, bank: 0, level: 1 }),
+            true,
+        );
+    });
+
+    it('identifies social, economic, relation types, and noisy stream events', () => {
         assert.equal(isSocialEvent('player_chat'), true);
         assert.equal(isSocialEvent('player_join'), false);
+        assert.equal(resolveSocialRelationType('player_trade'), 'TRADE_PARTNER');
+        assert.equal(resolveSocialRelationType('faction_action'), 'FACTION_MEMBER');
         assert.equal(isEconomicEvent('vehicle_purchase'), true);
         assert.equal(isEconomicEvent('fine_issued'), true);
         assert.equal(isEconomicEvent('player_position'), false);
+        assert.equal(isNoisyStreamEvent('player_position'), true);
+        assert.equal(isNoisyStreamEvent('player_status_sync'), true);
+        assert.equal(isNoisyStreamEvent('fine_issued'), false);
     });
 });
