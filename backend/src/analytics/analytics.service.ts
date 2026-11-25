@@ -27,6 +27,8 @@ export class AnalyticsService implements OnModuleInit {
                     {
                         repeat: { cron: '0 * * * *' },
                         jobId: 'refresh-metrics-job',
+                        removeOnComplete: 50,
+                        removeOnFail: 50,
                     },
                 ),
                 this.metricsQueue.add(
@@ -35,6 +37,8 @@ export class AnalyticsService implements OnModuleInit {
                     {
                         repeat: { cron: '0 3 * * *' },
                         jobId: 'prune-old-data-job',
+                        removeOnComplete: 50,
+                        removeOnFail: 50,
                     },
                 ),
             ]);

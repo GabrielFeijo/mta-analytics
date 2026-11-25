@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Role } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 
 const PLAYER_SUMMARY_SELECT = {
@@ -18,6 +19,8 @@ const PLAYER_SUMMARY_SELECT = {
     characterId: true,
 } as const;
 
+const MAX_SEARCH_QUERY_LENGTH = 100;
+
 @Injectable()
 export class PlayersService {
     constructor(private readonly prisma: PrismaService) {}
@@ -27,6 +30,7 @@ export class PlayersService {
 
         return this.prisma.player.findMany({
             where: {
+                isOnline: true,
                 lastSeen: { gte: fiveMinutesAgo },
             },
             select: PLAYER_SUMMARY_SELECT,
@@ -34,13 +38,23 @@ export class PlayersService {
         });
     }
 
-    async getPlayer(id: number) {
+    async getPlayer(id: number, requesterRole: Role = Role.VIEWER) {
+        const includeIp = requesterRole === Role.ADMIN || requesterRole === Role.MODERATOR;
+
         const player = await this.prisma.player.findUnique({
             where: { id },
             include: {
                 sessions: {
                     take: 10,
                     orderBy: { loginAt: 'desc' },
+                    select: {
+                        id: true,
+                        playerId: true,
+                        loginAt: true,
+                        logoutAt: true,
+                        duration: true,
+                        ip: includeIp,
+                    },
                 },
                 transactions: {
                     take: 20,
@@ -68,7 +82,7 @@ export class PlayersService {
     }
 
     async searchPlayers(query: string) {
-        const trimmed = (query || '').trim();
+        const trimmed = (query || '').trim().slice(0, MAX_SEARCH_QUERY_LENGTH);
         if (!trimmed) {
             return [];
         }
@@ -91,24 +105,28 @@ export class PlayersService {
     async getPlayerStats(id: number) {
         const player = await this.prisma.player.findUnique({
             where: { id },
+            include: {
+                _count: {
+                    select: {
+                        events: true,
+                        transactions: true,
+                        sessions: true,
+                    },
+                },
+            },
         });
 
         if (!player) {
             throw new NotFoundException(`Jogador #${id} não encontrado.`);
         }
 
-        const [eventCount, transactionCount, sessionCount] = await Promise.all([
-            this.prisma.event.count({ where: { playerId: id } }),
-            this.prisma.transaction.count({ where: { playerId: id } }),
-            this.prisma.playerSession.count({ where: { playerId: id } }),
-        ]);
-
+        const { _count, ...playerFields } = player;
         return {
-            ...player,
+            ...playerFields,
             stats: {
-                totalEvents: eventCount,
-                totalTransactions: transactionCount,
-                totalSessions: sessionCount,
+                totalEvents: _count.events,
+                totalTransactions: _count.transactions,
+                totalSessions: _count.sessions,
             },
         };
     }

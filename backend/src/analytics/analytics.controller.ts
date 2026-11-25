@@ -1,5 +1,7 @@
 import { Controller, Get, Param, ParseIntPipe, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { RateLimitGuard } from '../common/guards/rate-limit.guard';
+import { RateLimit } from '../common/decorators/rate-limit.decorator';
 import { AnalyticsService } from './analytics.service';
 import { HeatmapQueryDto, HoursQueryDto, LimitQueryDto } from './dto/analytics-query.dto';
 
@@ -24,6 +26,8 @@ export class AnalyticsController {
     }
 
     @Get('heatmap')
+    @UseGuards(RateLimitGuard)
+    @RateLimit({ limit: 60, ttlSeconds: 60 })
     async getHeatmapData(@Query() query: HeatmapQueryDto) {
         return this.analyticsService.getHeatmapData({
             eventType: query.eventType,
@@ -47,11 +51,15 @@ export class AnalyticsController {
     }
 
     @Get('resources')
+    @UseGuards(RateLimitGuard)
+    @RateLimit({ limit: 60, ttlSeconds: 60 })
     async getResourceStats(@Query() query: HoursQueryDto) {
         return this.analyticsService.getResourceStats(query.hours ?? 24);
     }
 
     @Get('fines')
+    @UseGuards(RateLimitGuard)
+    @RateLimit({ limit: 60, ttlSeconds: 60 })
     async getFinesStats(@Query() query: HoursQueryDto) {
         return this.analyticsService.getFinesStats(query.hours ?? 24);
     }

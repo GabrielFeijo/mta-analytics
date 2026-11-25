@@ -72,7 +72,7 @@ export class DashboardAnalyticsService {
             riskAlerts,
             serverStatus,
             trends: {
-                playerGrowth: `${playerGrowthPct >= 0 ? '+' : ''}${playerGrowthPct.toFixed(1)}`,
+                playerGrowth: `${playerGrowthPct >= 0 ? '+' : ''}${playerGrowthPct.toFixed(1)}%`,
                 onlineTrend,
             },
             timestamp: now,
@@ -123,6 +123,7 @@ export class DashboardAnalyticsService {
         const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
         const count = await this.prisma.player.count({
             where: {
+                isOnline: true,
                 lastSeen: { gte: fiveMinutesAgo },
             },
         });
@@ -135,6 +136,7 @@ export class DashboardAnalyticsService {
         const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
         return this.prisma.player.findMany({
             where: {
+                isOnline: true,
                 lastSeen: { gte: fiveMinutesAgo },
             },
             select: {
@@ -150,9 +152,21 @@ export class DashboardAnalyticsService {
 
     async getRecentEvents(limit: number = 50) {
         return this.prisma.event.findMany({
+            where: {
+                eventType: {
+                    notIn: ['player_position', 'player_status_sync'],
+                },
+            },
             take: Math.min(200, Math.max(1, limit)),
             orderBy: { timestamp: 'desc' },
-            include: {
+            select: {
+                id: true,
+                eventType: true,
+                timestamp: true,
+                positionX: true,
+                positionY: true,
+                positionZ: true,
+                data: true,
                 player: {
                     select: {
                         lastUsername: true,
@@ -163,14 +177,15 @@ export class DashboardAnalyticsService {
         });
     }
 
-    async getPlayerActivityTimeline(playerId: number, hours: number = 24) {
+    async getPlayerActivityTimeline(playerId: number, hours: number = 24, limit: number = 100) {
         const startDate = new Date(Date.now() - hours * 60 * 60 * 1000);
         return this.prisma.event.findMany({
             where: {
                 playerId,
                 timestamp: { gte: startDate },
             },
-            orderBy: { timestamp: 'asc' },
+            take: Math.min(500, Math.max(1, limit)),
+            orderBy: { timestamp: 'desc' },
             select: {
                 id: true,
                 timestamp: true,

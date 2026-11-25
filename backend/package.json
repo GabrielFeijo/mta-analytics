@@ -9,7 +9,7 @@
         "start:dev": "nest start --watch",
         "start:prod": "node dist/main",
         "type-check": "tsc --noEmit",
-        "test": "node --test \"dist/**/*.spec.js\"",
+        "test": "npm run build && node --test \"dist/**/*.spec.js\"",
         "prisma:generate": "prisma generate",
         "prisma:migrate": "prisma migrate dev",
         "prisma:studio": "prisma studio"

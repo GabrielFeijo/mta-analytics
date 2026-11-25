@@ -1,4 +1,4 @@
-import { TransactionType } from '@prisma/client';
+import { RelationType, TransactionType } from '@prisma/client';
 import { PlayerEventPayload, PlayerMetrics } from '../../mta/dto/player-event.dto';
 
 export const TRANSACTION_TYPE_MAP: Record<string, TransactionType> = {
@@ -40,6 +40,8 @@ const ECONOMIC_EVENTS = new Set([
     'fine_issued',
 ]);
 
+const NOISY_STREAM_EVENTS = new Set(['player_position', 'player_status_sync']);
+
 export function isSocialEvent(eventType: string): boolean {
     return SOCIAL_EVENTS.has(eventType);
 }
@@ -48,12 +50,58 @@ export function isEconomicEvent(eventType: string): boolean {
     return ECONOMIC_EVENTS.has(eventType);
 }
 
+export function isNoisyStreamEvent(eventType: string): boolean {
+    return NOISY_STREAM_EVENTS.has(eventType);
+}
+
+export function resolveSocialRelationType(eventType: string): RelationType {
+    switch (eventType) {
+        case 'player_trade':
+            return 'TRADE_PARTNER';
+        case 'faction_action':
+            return 'FACTION_MEMBER';
+        default:
+            return 'FRIEND';
+    }
+}
+
+/**
+ * Prevents uninitialized character snapshots on login/quit (no charId and all-zero balances)
+ * from overwriting persisted player wealth in PostgreSQL.
+ */
+export function shouldApplyPlayerMetrics(eventType: string, data: PlayerMetrics): boolean {
+    if (eventType !== 'initial_player_sync' && eventType !== 'player_quit') {
+        return true;
+    }
+    const hasCharId = finiteOrUndefined(data.id) !== undefined;
+    if (hasCharId) {
+        return true;
+    }
+    const money = finiteOrUndefined(data.money) ?? 0;
+    const bank = finiteOrUndefined(data.bank) ?? 0;
+    const dirtyMoney = finiteOrUndefined(data.dirtyMoney) ?? 0;
+    const level = finiteOrUndefined(data.level) ?? 1;
+    return !(money === 0 && bank === 0 && dirtyMoney === 0 && level <= 1);
+}
+
 function finiteOrUndefined(value: unknown): number | undefined {
     if (value === undefined || value === null || value === '') {
         return undefined;
     }
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function roundCurrency(value: number): number {
+    return Math.round(value * 100) / 100;
+}
+
+function parsePositiveAmount(value: unknown): number | null {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+        return null;
+    }
+    return roundCurrency(parsed);
 }
 
 export function extractPlayerMetrics(data: PlayerMetrics): Record<string, number | string> {
@@ -113,55 +161,90 @@ export function buildTransactionInput(
             return {
                 playerId,
                 type: rawAmount > 0 ? 'EARN' : 'SPEND',
-                amount: Math.abs(rawAmount),
-                balance: Number(data.newBalance) || 0,
+                amount: roundCurrency(Math.abs(rawAmount)),
+                balance: roundCurrency(Number(data.newBalance) || 0),
                 source: String(data.source || 'unknown'),
                 metadata: data,
             };
         }
 
         case 'player_transaction': {
-            const rawAmount = Math.abs(Number(data.amount) || 0);
-            const transType = TRANSACTION_TYPE_MAP[String(data.type || '')] || 'SPEND';
+            const rawType = String(data.type || '');
+            const rawAmount = Number(data.amount);
+            if (!Number.isFinite(rawAmount) || rawAmount === 0) {
+                return null;
+            }
+            const amount = roundCurrency(Math.abs(rawAmount));
+            const transType = TRANSACTION_TYPE_MAP[rawType] || 'SPEND';
+            let balance = Number(data.money) || 0;
+            if (rawType.includes('dirty')) {
+                balance = Number(data.dirtyMoney ?? data.money) || 0;
+            } else if (
+                rawType === 'deposit' ||
+                rawType === 'withdraw' ||
+                rawType.includes('business_')
+            ) {
+                balance = Number(data.bank ?? data.money) || 0;
+            }
+
             return {
                 playerId,
                 type: transType,
-                amount: rawAmount,
-                balance: Number(data.money) || 0,
+                amount,
+                balance: roundCurrency(balance),
                 source: String(data.source_resource || 'bank'),
                 metadata: data,
             };
         }
 
-        case 'vehicle_purchase':
+        case 'vehicle_purchase': {
+            const amount = parsePositiveAmount(data.price);
+            if (amount === null) {
+                return null;
+            }
+            const rawBalance =
+                data.paymentMethod === 'bank'
+                    ? (data.bank ?? data.money)
+                    : (data.money ?? data.bank);
             return {
                 playerId,
                 type: 'SPEND',
-                amount: Math.abs(Number(data.price) || 0),
-                balance: 0,
+                amount,
+                balance: roundCurrency(Number(rawBalance) || 0),
                 source: String(data.source_resource || 'carshop'),
                 metadata: data,
             };
+        }
 
-        case 'fine_issued':
+        case 'fine_issued': {
+            const amount = parsePositiveAmount(data.amount);
+            if (amount === null) {
+                return null;
+            }
             return {
                 playerId,
                 type: 'SPEND',
-                amount: Math.abs(Number(data.amount) || 0),
-                balance: 0,
+                amount,
+                balance: roundCurrency(Number(data.bank ?? data.money) || 0),
                 source: 'traffic_fine',
                 metadata: data,
             };
+        }
 
-        case 'shop_purchase':
+        case 'shop_purchase': {
+            const amount = parsePositiveAmount(data.amount ?? data.price);
+            if (amount === null) {
+                return null;
+            }
             return {
                 playerId,
                 type: 'SPEND',
-                amount: Math.abs(Number(data.amount ?? data.price) || 0),
-                balance: Number(data.money) || 0,
+                amount,
+                balance: roundCurrency(Number(data.money) || 0),
                 source: String(data.source_resource || 'shop_purchase'),
                 metadata: data,
             };
+        }
 
         case 'player_trade': {
             const rawAmount = Number(data.amount);
@@ -171,8 +254,8 @@ export function buildTransactionInput(
             return {
                 playerId,
                 type: rawAmount > 0 ? 'TRANSFER_IN' : 'TRANSFER_OUT',
-                amount: Math.abs(rawAmount),
-                balance: Number(data.money) || 0,
+                amount: roundCurrency(Math.abs(rawAmount)),
+                balance: roundCurrency(Number(data.money) || 0),
                 source: String(data.source_resource || 'player_trade'),
                 metadata: data,
             };

@@ -21,10 +21,17 @@ export class TimeSeriesQueryDto {
     period?: EconomyPeriod;
 }
 
+export const ALLOWED_TRANSACTION_CATEGORIES = ['ALL', 'EARN', 'SPEND'] as const;
+export type TransactionCategoryFilter = (typeof ALLOWED_TRANSACTION_CATEGORIES)[number];
+
 export class TransactionLimitQueryDto {
     @IsOptional()
     @IsInt()
     @Min(1)
     @Max(200)
     limit?: number;
+
+    @IsOptional()
+    @IsIn(ALLOWED_TRANSACTION_CATEGORIES)
+    category?: TransactionCategoryFilter;
 }

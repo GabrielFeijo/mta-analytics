@@ -10,6 +10,7 @@ export interface HeatmapCell {
 }
 
 const SPARSE_INTENSITY_FLOOR = 5;
+const MAX_HEATMAP_RANGE_MS = 31 * 24 * 60 * 60 * 1000;
 
 /**
  * Normalizes cell intensity in [0, 1] while preventing sparse layers (e.g. 1-2 vehicle sales)
@@ -40,6 +41,12 @@ export class HeatmapAnalyticsService {
         ) {
             throw new BadRequestException('Invalid startDate or endDate parameter');
         }
+        if (filters.startDate.getTime() > filters.endDate.getTime()) {
+            throw new BadRequestException('startDate must be earlier than or equal to endDate');
+        }
+        if (filters.endDate.getTime() - filters.startDate.getTime() > MAX_HEATMAP_RANGE_MS) {
+            throw new BadRequestException('Heatmap query range cannot exceed 31 days');
+        }
 
         const gridSize = Math.min(500, Math.max(10, filters.gridSize || 50));
         const eventFilter =
@@ -58,6 +65,8 @@ export class HeatmapAnalyticsService {
             WHERE "timestamp" BETWEEN ${filters.startDate} AND ${filters.endDate}
               AND "positionX" IS NOT NULL
               AND "positionY" IS NOT NULL
+              AND ("data"->>'interior' IS NULL OR "data"->>'interior' = '0')
+              AND ("data"->>'dimension' IS NULL OR "data"->>'dimension' = '0')
               ${eventFilter}
             GROUP BY FLOOR("positionX" / ${gridSize}), FLOOR("positionY" / ${gridSize})
             ORDER BY count DESC

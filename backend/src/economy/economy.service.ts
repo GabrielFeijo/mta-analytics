@@ -1,14 +1,21 @@
 import { Injectable } from '@nestjs/common';
-import { EconomicMetric } from '@prisma/client';
+import { EconomicMetric, TransactionType } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { EconomyMetricsService } from '../analytics/services/economy-metrics.service';
-import { EconomyPeriod, EconomyTimeSeriesMetric } from './dto/economy-query.dto';
+import {
+    EconomyPeriod,
+    EconomyTimeSeriesMetric,
+    TransactionCategoryFilter,
+} from './dto/economy-query.dto';
 
 const PERIOD_HOURS: Record<EconomyPeriod, number> = {
     '24h': 24,
     '7d': 7 * 24,
     '30d': 30 * 24,
 };
+
+const INFLOW_TYPES: TransactionType[] = ['EARN', 'TRANSFER_IN', 'ADMIN_ADD'];
+const OUTFLOW_TYPES: TransactionType[] = ['SPEND', 'TRANSFER_OUT', 'ADMIN_REMOVE'];
 
 function readMetricField(row: EconomicMetric, metric: EconomyTimeSeriesMetric): number {
     switch (metric) {
@@ -68,8 +75,19 @@ export class EconomyService {
         }));
     }
 
-    async getRecentTransactions(limit: number = 50) {
+    async getRecentTransactions(
+        limit: number = 50,
+        category: TransactionCategoryFilter = 'ALL',
+    ) {
+        const typeFilter =
+            category === 'EARN'
+                ? { in: INFLOW_TYPES }
+                : category === 'SPEND'
+                  ? { in: OUTFLOW_TYPES }
+                  : undefined;
+
         const transactions = await this.prisma.transaction.findMany({
+            where: typeFilter ? { type: typeFilter } : undefined,
             take: Math.min(200, Math.max(1, limit)),
             orderBy: { timestamp: 'desc' },
             include: {

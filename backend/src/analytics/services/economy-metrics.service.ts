@@ -19,6 +19,8 @@ export interface OverviewDayPointDto {
 
 @Injectable()
 export class EconomyMetricsService {
+    private inflightGeneration: Promise<EconomicSnapshotDto> | null = null;
+
     constructor(private readonly prisma: PrismaService) {}
 
     async getEconomicSnapshot(): Promise<EconomicSnapshotDto> {
@@ -27,7 +29,12 @@ export class EconomyMetricsService {
         });
 
         if (!latest) {
-            return this.generateEconomicMetrics();
+            if (!this.inflightGeneration) {
+                this.inflightGeneration = this.generateEconomicMetrics().finally(() => {
+                    this.inflightGeneration = null;
+                });
+            }
+            return this.inflightGeneration;
         }
 
         const meta = latest.metadata as Record<string, unknown> | null;
@@ -42,7 +49,8 @@ export class EconomyMetricsService {
     }
 
     async generateEconomicMetrics(): Promise<EconomicSnapshotDto> {
-        const [aggregate, lastMetric] = await Promise.all([
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        const [aggregate, activePlayersCount, lastMetric] = await Promise.all([
             this.prisma.player.aggregate({
                 _sum: {
                     money: true,
@@ -50,6 +58,12 @@ export class EconomyMetricsService {
                     dirtyMoney: true,
                 },
                 _count: { _all: true },
+            }),
+            this.prisma.player.count({
+                where: {
+                    isBanned: false,
+                    lastSeen: { gte: thirtyDaysAgo },
+                },
             }),
             this.prisma.economicMetric.findFirst({
                 orderBy: { timestamp: 'desc' },
@@ -60,8 +74,8 @@ export class EconomyMetricsService {
         const bankTotal = Math.max(0, aggregate._sum.bank ?? 0);
         const dirtyMoney = Math.max(0, aggregate._sum.dirtyMoney ?? 0);
         const totalMoney = moneyInCirc + bankTotal;
-        const totalPlayers = aggregate._count._all;
-        const avgPlayerWealth = totalPlayers > 0 ? totalMoney / totalPlayers : 0;
+        const divisor = activePlayersCount > 0 ? activePlayersCount : aggregate._count._all;
+        const avgPlayerWealth = divisor > 0 ? totalMoney / divisor : 0;
 
         let inflationRate = 0;
         if (lastMetric && lastMetric.totalMoney > 0) {
@@ -76,7 +90,7 @@ export class EconomyMetricsService {
                 moneyInCirc,
                 avgPlayerWealth,
                 inflationRate,
-                metadata: { dirtyMoney, bankTotal },
+                metadata: { dirtyMoney, bankTotal, activePlayersCount },
                 timestamp: new Date(),
             },
         });
@@ -100,7 +114,7 @@ export class EconomyMetricsService {
             Array<{ day: Date; type: string; total: number }>
         >`
             SELECT
-                DATE_TRUNC('day', "timestamp") AS day,
+                DATE_TRUNC('day', "timestamp" AT TIME ZONE 'UTC') AS day,
                 "type"::text AS type,
                 COALESCE(SUM("amount"), 0)::double precision AS total
             FROM "transactions"

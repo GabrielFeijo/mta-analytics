@@ -1,5 +1,13 @@
 import { Transform, Type } from 'class-transformer';
-import { IsNumber, IsObject, IsOptional, IsString, ValidateNested } from 'class-validator';
+import {
+    IsNotEmpty,
+    IsNumber,
+    IsObject,
+    IsOptional,
+    IsString,
+    MaxLength,
+    ValidateNested,
+} from 'class-validator';
 
 export interface PlayerMetrics {
     money?: number;
@@ -45,6 +53,8 @@ class PositionDto {
 
 export class PlayerEventDto {
     @IsString()
+    @IsNotEmpty()
+    @MaxLength(120)
     eventType: string;
 
     @IsNumber()
@@ -52,9 +62,13 @@ export class PlayerEventDto {
     playerId?: number;
 
     @IsString()
+    @IsNotEmpty()
+    @MaxLength(64)
     playerSerial: string;
 
     @IsString()
+    @IsNotEmpty()
+    @MaxLength(120)
     playerName: string;
 
     @ValidateNested()
@@ -69,7 +83,7 @@ export class PlayerEventDto {
         return value;
     })
     @IsObject()
-    data: Record<string, any>;
+    data: Record<string, unknown>;
 
     @IsNumber()
     @IsOptional()

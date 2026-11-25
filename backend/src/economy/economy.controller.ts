@@ -20,7 +20,10 @@ export class EconomyController {
 
     @Get('transactions/recent')
     async getRecentTransactions(@Query() query: TransactionLimitQueryDto) {
-        return this.economyService.getRecentTransactions(query.limit ?? 50);
+        return this.economyService.getRecentTransactions(
+            query.limit ?? 50,
+            query.category ?? 'ALL',
+        );
     }
 
     @Get('transactions/player/:id')

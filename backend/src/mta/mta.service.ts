@@ -28,7 +28,6 @@ export class MtaService {
             serverId: serverId ?? event.serverId,
         };
 
-        await this.recordRecentAndMetrics([enriched]);
         await this.eventsQueue.add('process-event', enriched, EVENT_JOB_OPTIONS);
     }
 
@@ -37,16 +36,12 @@ export class MtaService {
             return;
         }
 
-        const enrichedEvents = events.map((event) => ({
-            ...event,
-            serverId: serverId ?? event.serverId,
-        }));
-
-        await this.recordRecentAndMetrics(enrichedEvents);
-
-        const jobs = enrichedEvents.map((event) => ({
+        const jobs = events.map((event) => ({
             name: 'process-event',
-            data: event,
+            data: {
+                ...event,
+                serverId: serverId ?? event.serverId,
+            },
             opts: EVENT_JOB_OPTIONS,
         }));
 
@@ -65,20 +60,6 @@ export class MtaService {
         if (serverId) {
             pipeline.setex(`server:status:${serverId}`, 90, statusPayload);
         }
-        await pipeline.exec();
-    }
-
-    private async recordRecentAndMetrics(events: PlayerEventPayload[]): Promise<void> {
-        const pipeline = this.redis.pipeline();
-
-        for (const event of events) {
-            pipeline.lpush('recent_events', JSON.stringify(event));
-            const metricKey = `metrics:${event.eventType}:count`;
-            pipeline.incr(metricKey);
-            pipeline.expire(metricKey, 3600);
-        }
-
-        pipeline.ltrim('recent_events', 0, 999);
         await pipeline.exec();
     }
 }
