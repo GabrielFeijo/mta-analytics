@@ -30,6 +30,8 @@ model Session {
 
   admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
 
+  @@index([adminId])
+  @@index([expiresAt])
   @@map("sessions")
 }
 
@@ -46,6 +48,7 @@ model Player {
   totalPlaytime Int      @default(0)
   firstSeen     DateTime @default(now())
   lastSeen      DateTime @default(now())
+  isOnline      Boolean  @default(false)
   isBanned      Boolean  @default(false)
   riskScore     Float    @default(0.0)
   metadata      Json?
@@ -69,9 +72,9 @@ model Player {
   relationships  PlayerRelationship[] @relation("PlayerA")
   relationshipsB PlayerRelationship[] @relation("PlayerB")
 
-  @@index([serial])
   @@index([firstSeen])
   @@index([lastSeen])
+  @@index([isOnline, lastSeen(sort: Desc)])
   @@index([riskScore])
   @@map("players")
 }
@@ -87,6 +90,7 @@ model PlayerSession {
   player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
 
   @@index([playerId])
+  @@index([playerId, logoutAt])
   @@index([loginAt])
   @@map("player_sessions")
 }
@@ -126,6 +130,7 @@ model Transaction {
   @@index([playerId, timestamp(sort: Desc)])
   @@index([type, timestamp(sort: Desc)])
   @@index([source, timestamp(sort: Desc)])
+  @@index([timestamp(sort: Desc)])
   @@map("transactions")
 }
 
@@ -165,7 +170,6 @@ model PlayerRelationship {
   playerB Player @relation("PlayerB", fields: [playerBId], references: [id], onDelete: Cascade)
 
   @@unique([playerAId, playerBId, type])
-  @@index([playerAId])
   @@index([playerBId])
   @@map("player_relationships")
 }
