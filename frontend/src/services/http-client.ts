@@ -5,7 +5,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
 
 export const httpClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 6000,
+  timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -23,7 +23,9 @@ httpClient.interceptors.response.use(
   (response) => response,
   (error) => {
     const { isDemoMode, logout } = useAuthStore.getState();
-    if (error.response?.status === 401 && !isDemoMode) {
+    const requestUrl = String(error.config?.url || '');
+    const isLoginAttempt = requestUrl.includes('/auth/login');
+    if (error.response?.status === 401 && !isDemoMode && !isLoginAttempt) {
       logout();
     }
     return Promise.reject(error);

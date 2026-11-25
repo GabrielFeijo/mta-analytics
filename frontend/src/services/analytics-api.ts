@@ -89,7 +89,7 @@ export const analyticsApi = {
 
   getResourcesStats: async (hours: number = 24): Promise<ResourcesStats> => {
     if (isDemo()) {
-      return getMockResourcesStats();
+      return getMockResourcesStats(hours);
     }
     const response = await httpClient.get<ResourcesStats>('/analytics/resources', {
       params: { hours },
@@ -107,7 +107,7 @@ export const analyticsApi = {
 
   getFinesStats: async (hours: number = 24): Promise<FinesStats> => {
     if (isDemo()) {
-      return getMockFinesStats();
+      return getMockFinesStats(hours);
     }
     const response = await httpClient.get<FinesStats>('/analytics/fines', {
       params: { hours },

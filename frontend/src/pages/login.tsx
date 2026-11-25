@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { KeyRound, Terminal } from 'lucide-react';
 import { AxiosError } from 'axios';
 import { authApi } from '@/services/auth-api';
@@ -9,6 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
 export default function Login() {
+  const location = useLocation();
+  const registeredNotice = Boolean((location.state as { registered?: boolean } | null)?.registered);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -60,6 +62,12 @@ export default function Login() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-3.5">
+            {registeredNotice && !error && (
+              <div className="rounded-sm border border-ok/40 bg-ok/10 p-2.5 text-xs text-ok">
+                Credencial cadastrada com sucesso. Autentique para acessar o painel.
+              </div>
+            )}
+
             {error && (
               <div className="rounded-sm border border-line border-l-2 border-l-signal bg-bg2 p-2.5 text-xs text-ink">
                 {error}
@@ -67,8 +75,11 @@ export default function Login() {
             )}
 
             <div>
-              <label className="mb-1 block text-2xs text-ink-dim">E-mail Operacional</label>
+              <label htmlFor="login-email" className="mb-1 block text-2xs text-ink-dim">
+                E-mail Operacional
+              </label>
               <Input
+                id="login-email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -78,8 +89,11 @@ export default function Login() {
             </div>
 
             <div>
-              <label className="mb-1 block text-2xs text-ink-dim">Chave de Acesso</label>
+              <label htmlFor="login-password" className="mb-1 block text-2xs text-ink-dim">
+                Chave de Acesso
+              </label>
               <Input
+                id="login-password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

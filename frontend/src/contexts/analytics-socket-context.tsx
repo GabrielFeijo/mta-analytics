@@ -4,10 +4,12 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { authApi } from '@/services/auth-api';
 import { useAuthStore } from '@/stores/auth-store';
 
 const WS_URL = import.meta.env.VITE_WS_URL || 'http://localhost:3000';
@@ -61,11 +63,11 @@ export function AnalyticsSocketProvider({ children }: { children: ReactNode }) {
 
     const socketInstance = io(`${WS_URL}/analytics`, {
       auth: { token },
-      transports: ['websocket'],
+      transports: ['websocket', 'polling'],
       reconnection: true,
-      reconnectionAttempts: 5,
+      reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
+      reconnectionDelayMax: 15000,
     });
 
     socketRef.current = socketInstance;
@@ -73,7 +75,12 @@ export function AnalyticsSocketProvider({ children }: { children: ReactNode }) {
 
     socketInstance.on('connect', () => setIsConnected(true));
     socketInstance.on('disconnect', () => setIsConnected(false));
-    socketInstance.on('connect_error', () => setIsConnected(false));
+    socketInstance.on('connect_error', (err) => {
+      setIsConnected(false);
+      if (/unauthorized|revoked|expired/i.test(err?.message || '')) {
+        void authApi.logout();
+      }
+    });
 
     for (const event of listenersRef.current.keys()) {
       attachEventDispatcher(socketInstance, event);
@@ -142,10 +149,13 @@ export function AnalyticsSocketProvider({ children }: { children: ReactNode }) {
     [isConnected],
   );
 
+  const contextValue = useMemo(
+    () => ({ socket, isConnected, subscribe, unsubscribe, emit }),
+    [socket, isConnected, subscribe, unsubscribe, emit],
+  );
+
   return (
-    <AnalyticsSocketContext.Provider
-      value={{ socket, isConnected, subscribe, unsubscribe, emit }}
-    >
+    <AnalyticsSocketContext.Provider value={contextValue}>
       {children}
     </AnalyticsSocketContext.Provider>
   );

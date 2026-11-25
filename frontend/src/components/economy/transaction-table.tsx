@@ -8,7 +8,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { formatCurrency, formatTime } from '@/lib/formatters';
+import { formatCurrency, formatDate, formatTime } from '@/lib/formatters';
 import { Transaction } from '@/types/telemetry';
 
 const TYPE_META: Record<
@@ -35,7 +35,13 @@ function resolveTransactionDescription(tx: Transaction): string | undefined {
   return typeof candidate === 'string' && candidate.trim() ? candidate : undefined;
 }
 
-export function TransactionTable({ transactions }: { transactions: Transaction[] }) {
+export function TransactionTable({
+  transactions,
+  showDate = true,
+}: {
+  transactions: Transaction[];
+  showDate?: boolean;
+}) {
   if (!transactions || transactions.length === 0) {
     return (
       <div className="py-10 text-center text-xs text-ink-dim">
@@ -96,7 +102,7 @@ export function TransactionTable({ transactions }: { transactions: Transaction[]
                 {meta.isInflow ? '+' : '-'} {formatCurrency(Number(tx.amount) || 0)}
               </TableCell>
               <TableCell className="whitespace-nowrap text-right font-mono text-2xs tabular-nums text-ink-faint">
-                {formatTime(tx.timestamp)}
+                {showDate ? formatDate(tx.timestamp) : formatTime(tx.timestamp)}
               </TableCell>
             </TableRow>
           );

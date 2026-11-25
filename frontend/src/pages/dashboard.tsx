@@ -22,11 +22,12 @@ import { HeatmapView } from '@/components/dashboard/heatmap-view';
 import { QueryErrorState } from '@/components/common/query-error-state';
 
 export default function Dashboard() {
-  const { socket, isConnected, subscribe } = useAnalyticsSocket();
+  const { socket, subscribe } = useAnalyticsSocket();
   const {
     stats,
     setStats,
     addEvent,
+    updatePlayerCount,
     adjustPlayerCount,
     updateEconomicSnapshot,
   } = useDashboardStore();
@@ -42,13 +43,17 @@ export default function Dashboard() {
     refetchInterval: 30000,
   });
 
-  const { data: overviewData = [] } = useQuery({
+  const {
+    data: overviewData = [],
+    isError: isOverviewError,
+    refetch: refetchOverview,
+  } = useQuery({
     queryKey: ['dashboard-overview'],
     queryFn: analyticsApi.getOverviewStats,
     refetchInterval: 60000,
   });
 
-  const { data: resourcesData } = useQuery({
+  const { data: resourcesData, isError: isResourcesError } = useQuery({
     queryKey: ['resources-stats', 24],
     queryFn: () => analyticsApi.getResourcesStats(24),
     refetchInterval: 60000,
@@ -61,13 +66,25 @@ export default function Dashboard() {
   }, [initialData, setStats]);
 
   useEffect(() => {
-    if (!socket || !isConnected) return undefined;
+    if (!socket) return undefined;
 
     const cleanups = [
       subscribe<DashboardStats>('initial-data', (data) => setStats(data)),
       subscribe<RecentEvent>('event:new', (event) => addEvent(event)),
-      subscribe('player:online', () => adjustPlayerCount(1)),
-      subscribe('player:offline', () => adjustPlayerCount(-1)),
+      subscribe<{ onlinePlayers?: number }>('player:online', (payload) => {
+        if (typeof payload?.onlinePlayers === 'number') {
+          updatePlayerCount(payload.onlinePlayers);
+        } else {
+          adjustPlayerCount(1);
+        }
+      }),
+      subscribe<{ onlinePlayers?: number }>('player:offline', (payload) => {
+        if (typeof payload?.onlinePlayers === 'number') {
+          updatePlayerCount(payload.onlinePlayers);
+        } else {
+          adjustPlayerCount(-1);
+        }
+      }),
       subscribe<EconomicSnapshot>('economy:update', (data) => updateEconomicSnapshot(data)),
     ];
 
@@ -76,10 +93,10 @@ export default function Dashboard() {
     };
   }, [
     socket,
-    isConnected,
     subscribe,
     setStats,
     addEvent,
+    updatePlayerCount,
     adjustPlayerCount,
     updateEconomicSnapshot,
   ]);
@@ -103,6 +120,8 @@ export default function Dashboard() {
 
   const currentStats = stats || initialData;
   const riskAlertsCount = Number(currentStats?.riskAlerts) || 0;
+  const rawGrowth = currentStats?.trends?.playerGrowth || '+0.0%';
+  const formattedGrowth = rawGrowth.endsWith('%') ? rawGrowth : `${rawGrowth}%`;
 
   return (
     <div className="space-y-4">
@@ -114,7 +133,7 @@ export default function Dashboard() {
           footerLeft="Base cadastrada"
           footerRight={
             <span className="font-mono text-ok">
-              {currentStats?.trends?.playerGrowth || '+0.0'}% (24h)
+              {formattedGrowth} (24h)
             </span>
           }
         />
@@ -149,16 +168,20 @@ export default function Dashboard() {
 
         <MetricCard
           label="VOLUME LOJAS & RACHAS (24H)"
-          value={formatCurrency(resourcesData?.stats?.totalRevenue || 0)}
+          value={isResourcesError ? '—' : formatCurrency(resourcesData?.stats?.totalRevenue || 0)}
           icon={Flag}
           iconClassName="text-signal"
           footerLeft={
-            <>
-              Rachas:{' '}
-              <span className="font-mono text-brass">
-                {formatCurrency(resourcesData?.stats?.raceVolume || 0)}
-              </span>
-            </>
+            isResourcesError ? (
+              <span className="text-signal">Falha ao consultar</span>
+            ) : (
+              <>
+                Rachas:{' '}
+                <span className="font-mono text-brass">
+                  {formatCurrency(resourcesData?.stats?.raceVolume || 0)}
+                </span>
+              </>
+            )
           }
           footerRight={
             riskAlertsCount > 0 ? (
@@ -200,7 +223,14 @@ export default function Dashboard() {
                 </Badge>
               </CardHeader>
               <CardContent>
-                <EconomyOverviewChart data={overviewData} />
+                {isOverviewError ? (
+                  <QueryErrorState
+                    message="Falha ao carregar o comparativo de 7 dias."
+                    onRetry={() => void refetchOverview()}
+                  />
+                ) : (
+                  <EconomyOverviewChart data={overviewData} />
+                )}
               </CardContent>
             </Card>
 

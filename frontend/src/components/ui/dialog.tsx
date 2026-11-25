@@ -23,14 +23,20 @@ export function Dialog({
   children: React.ReactNode;
 }) {
   React.useEffect(() => {
-    if (!open) return;
+    if (!open) return undefined;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         onOpenChange(false);
       }
     };
     window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', handleKey);
+    };
   }, [open, onOpenChange]);
 
   return (
@@ -40,7 +46,15 @@ export function Dialog({
 
 export function DialogTrigger({ children }: { children: React.ReactNode }) {
   const ctx = React.useContext(DialogContext);
-  return <span onClick={() => ctx.onOpenChange(true)}>{children}</span>;
+  return (
+    <button
+      type="button"
+      className="inline-flex border-0 bg-transparent p-0 text-inherit"
+      onClick={() => ctx.onOpenChange(true)}
+    >
+      {children}
+    </button>
+  );
 }
 
 export function DialogPortal({ children }: { children: React.ReactNode }) {
@@ -83,17 +97,33 @@ export const DialogContent = React.forwardRef<
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, children, ...props }, ref) => {
   const ctx = React.useContext(DialogContext);
+  const localRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    if (ctx.open) {
+      localRef.current?.focus();
+    }
+  }, [ctx.open]);
+
   if (!ctx.open) return null;
 
   return createPortal(
     <>
       <DialogOverlay />
       <div
-        ref={ref}
+        ref={(node) => {
+          localRef.current = node;
+          if (typeof ref === 'function') {
+            ref(node);
+          } else if (ref) {
+            ref.current = node;
+          }
+        }}
         role="dialog"
         aria-modal="true"
+        tabIndex={-1}
         className={cn(
-          'fixed left-[50%] top-[50%] z-50 grid w-full max-w-xl translate-x-[-50%] translate-y-[-50%] gap-4 rounded-md border border-line-strong bg-bg1 p-5 text-ink shadow-[0_20px_50px_rgba(0,0,0,0.75)]',
+          'fixed left-[50%] top-[50%] z-50 grid w-full max-w-xl translate-x-[-50%] translate-y-[-50%] gap-4 rounded-md border border-line-strong bg-bg1 p-5 text-ink shadow-[0_20px_50px_rgba(0,0,0,0.75)] focus:outline-none',
           className,
         )}
         {...props}

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Car, Flag, ShoppingCart } from 'lucide-react';
 import { analyticsApi } from '@/services/analytics-api';
-import { formatCurrency, formatTime } from '@/lib/formatters';
+import { formatCurrency, formatDate, formatTime } from '@/lib/formatters';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { MetricCard } from '@/components/dashboard/metric-card';
@@ -109,7 +109,10 @@ export default function Resources() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <CardTitle>Telemetria Financeira — Underground Racing (`mta_racing`)</CardTitle>
+                <CardTitle>
+                  Telemetria Financeira — Underground Racing (
+                  <code className="font-mono text-brass">mta_racing</code>)
+                </CardTitle>
                 <CardDescription>
                   Movimentação de dinheiro limpo e dinheiro sujo (blocos) em baterias e apostas paralelas.
                 </CardDescription>
@@ -169,7 +172,9 @@ export default function Resources() {
                             {isEarn ? '+' : '-'} {formatCurrency(Number(item.amount) || 0)}
                           </TableCell>
                           <TableCell className="whitespace-nowrap text-right font-mono text-2xs tabular-nums text-ink-faint">
-                            {formatTime(item.timestamp)}
+                            {windowHours > 24
+                              ? formatDate(item.timestamp)
+                              : formatTime(item.timestamp)}
                           </TableCell>
                         </TableRow>
                       );
@@ -186,7 +191,9 @@ export default function Resources() {
             <CardHeader>
               <CardTitle>Aquisições Recentes em Concessionárias</CardTitle>
               <CardDescription>
-                Compras registradas via `logVehiclePurchase` (`spc_carshop`).
+                Compras registradas via{' '}
+                <code className="font-mono text-brass">logVehiclePurchase</code> (
+                <code className="font-mono text-ink">spc_carshop</code>).
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
@@ -194,11 +201,12 @@ export default function Resources() {
                 <div className="py-10 text-center text-xs text-ink-dim">Carregando…</div>
               ) : (
                 <TransactionTable
+                  showDate={windowHours > 24}
                   transactions={vehiclePurchases.map((tx) => ({
                     id: tx.id,
                     type: 'SPEND',
                     amount: tx.amount,
-                    source: 'spc_carshop',
+                    source: tx.source || 'spc_carshop',
                     description: tx.vehicleName || 'Veículo',
                     timestamp: tx.timestamp,
                     player: { lastUsername: tx.player },
@@ -215,7 +223,8 @@ export default function Resources() {
             <CardHeader>
               <CardTitle>Consumo em Lojas, Oficinas e Postos</CardTitle>
               <CardDescription>
-                Transações comerciais registradas via `logTransaction`.
+                Transações comerciais registradas via{' '}
+                <code className="font-mono text-brass">logTransaction</code>.
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
@@ -223,11 +232,12 @@ export default function Resources() {
                 <div className="py-10 text-center text-xs text-ink-dim">Carregando…</div>
               ) : (
                 <TransactionTable
+                  showDate={windowHours > 24}
                   transactions={shopPurchases.map((tx) => ({
                     id: tx.id,
                     type: 'SPEND',
                     amount: tx.amount,
-                    source: 'comercio_rp',
+                    source: tx.source || 'comercio_rp',
                     description: tx.itemName || 'Item comercial',
                     timestamp: tx.timestamp,
                     player: { lastUsername: tx.player },

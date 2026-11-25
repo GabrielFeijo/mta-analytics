@@ -1,8 +1,10 @@
 import {
   DashboardStats,
   EconomicSnapshot,
+  EconomyTimeSeriesPoint,
   FinesStats,
   HeatmapPoint,
+  OperatorRecord,
   OverviewDayPoint,
   Player,
   PlayerActivityEvent,
@@ -11,13 +13,37 @@ import {
   Transaction,
 } from '@/types/telemetry';
 
+export const MOCK_OPERATORS: OperatorRecord[] = [
+  {
+    id: 1,
+    username: 'Gabriel_Feijo',
+    email: 'admin@garagenight.rp',
+    role: 'ADMIN',
+    createdAt: '2026-01-05T14:00:00Z',
+  },
+  {
+    id: 2,
+    username: 'Lucas_Drift',
+    email: 'mod@garagenight.rp',
+    role: 'MODERATOR',
+    createdAt: '2026-01-12T18:30:00Z',
+  },
+  {
+    id: 3,
+    username: 'Kaio_Turbo',
+    email: 'auditor@garagenight.rp',
+    role: 'VIEWER',
+    createdAt: '2026-02-01T21:15:00Z',
+  },
+];
+
 export const MOCK_SERVER_STATUS: ServerStatus = {
   online: true,
   playerCount: 34,
   maxPlayers: 128,
   serverName: 'Garage Night RP (Snapshot)',
   queueSize: 0,
-  serverId: 'mta-server-key-1',
+  serverId: 'br-garage-night',
   updatedAt: Date.now(),
 };
 
@@ -290,7 +316,7 @@ export function getMockDashboardStats(): DashboardStats {
     onlinePlayers: 34,
     riskAlerts: 2,
     trends: {
-      playerGrowth: '+8.4',
+      playerGrowth: '+8.4%',
       onlineTrend: '+14%',
     },
     economicSnapshot: MOCK_ECONOMIC_SNAPSHOT,
@@ -385,150 +411,263 @@ export function getMockPlayerActivity(): PlayerActivityEvent[] {
   ];
 }
 
-export function getMockResourcesStats(): ResourcesStats {
+export function getMockEconomyTimeSeries(
+  metric: string,
+  period: string,
+): EconomyTimeSeriesPoint[] {
+  const points = period === '24h' ? 8 : period === '7d' ? 14 : 24;
+  const stepMs =
+    period === '24h'
+      ? 3 * 60 * 60 * 1000
+      : period === '7d'
+        ? 12 * 60 * 60 * 1000
+        : 30 * 60 * 60 * 1000;
+
+  const baseValue =
+    metric === 'moneyInCirc'
+      ? 5_100_000
+      : metric === 'avgPlayerWealth'
+        ? 112_000
+        : metric === 'inflationRate'
+          ? 1.1
+          : 16_800_000;
+
+  return Array.from({ length: points }, (_, idx) => {
+    const progress = idx / Math.max(1, points - 1);
+    const wave = Math.sin(idx * 0.9) * (metric === 'inflationRate' ? 0.35 : baseValue * 0.02);
+    const trend =
+      metric === 'inflationRate' ? progress * 0.7 : baseValue * 0.1 * progress;
+    return {
+      timestamp: new Date(Date.now() - (points - 1 - idx) * stepMs).toISOString(),
+      value: Number((baseValue + trend + wave).toFixed(metric === 'inflationRate' ? 2 : 0)),
+    };
+  });
+}
+
+export function getMockResourcesStats(windowHours: number = 24): ResourcesStats {
+  const windowMs = windowHours * 60 * 60 * 1000;
+  const scaleFactor = windowHours <= 6 ? 1 : windowHours <= 24 ? 1 : 4;
+
+  const allVehicleSales = [
+    {
+      id: 'vs-1',
+      player: 'Vini_Apex',
+      amount: 285000,
+      source: 'spc_carshop',
+      vehicleName: 'Nissan GTR (R35)',
+      timestamp: new Date(Date.now() - 950000).toISOString(),
+    },
+    {
+      id: 'vs-2',
+      player: 'Gabriel_Feijo',
+      amount: 340000,
+      source: 'spc_carshop',
+      vehicleName: 'Porsche 911 GT3 RS',
+      timestamp: new Date(Date.now() - 5400000).toISOString(),
+    },
+    {
+      id: 'vs-3',
+      player: 'Kaio_Turbo',
+      amount: 145000,
+      source: 'spc_carshop',
+      vehicleName: 'Mitsubishi Lancer Evo IX',
+      timestamp: new Date(Date.now() - 12800000).toISOString(),
+    },
+    {
+      id: 'vs-4',
+      player: 'Lucas_Drift',
+      amount: 198000,
+      source: 'spc_carshop',
+      vehicleName: 'Mazda RX-7 FD3S',
+      timestamp: new Date(Date.now() - 32000000).toISOString(),
+    },
+  ];
+
+  const allShopSales = [
+    {
+      id: 'ss-1',
+      player: 'Lucas_Drift',
+      amount: 6400,
+      source: 'spc_mechanic',
+      itemName: 'Kit Pneus Slick + Revisão Motor',
+      timestamp: new Date(Date.now() - 1800000).toISOString(),
+    },
+    {
+      id: 'ss-2',
+      player: 'Rafa_R34',
+      amount: 5000,
+      source: 'gg_underground',
+      itemName: 'Chip Clandestino #372 (Docas LS)',
+      timestamp: new Date(Date.now() - 4200000).toISOString(),
+    },
+    {
+      id: 'ss-3',
+      player: 'Vini_Apex',
+      amount: 850,
+      source: 'spc_businessfuel',
+      itemName: 'Abastecimento 52L Podium',
+      timestamp: new Date(Date.now() - 7600000).toISOString(),
+    },
+    {
+      id: 'ss-4',
+      player: 'Kaio_Turbo',
+      amount: 12400,
+      source: 'spc_mechanic',
+      itemName: 'Remap ECU Stage 2 + Nitro',
+      timestamp: new Date(Date.now() - 28000000).toISOString(),
+    },
+  ];
+
+  const allRaceActivity = [
+    {
+      id: 'ra-1',
+      player: 'Gabriel_Feijo',
+      type: 'EARN' as const,
+      amount: 45000,
+      currency: 'dirty' as const,
+      description: '1º Lugar — High Stakes: El Corona -> Orla Santa Maria',
+      timestamp: new Date(Date.now() - 180000).toISOString(),
+    },
+    {
+      id: 'ra-2',
+      player: 'Lucas_Drift',
+      type: 'SPEND' as const,
+      amount: 15000,
+      currency: 'clean' as const,
+      description: 'Taxa de Grid — Fuga das Docas: Willowfield -> Palomino',
+      timestamp: new Date(Date.now() - 420000).toISOString(),
+    },
+    {
+      id: 'ra-3',
+      player: 'Vini_Apex',
+      type: 'EARN' as const,
+      amount: 30000,
+      currency: 'dirty' as const,
+      description: '1º Lugar — San Fierro Hills: Queens & Chinatown',
+      timestamp: new Date(Date.now() - 3900000).toISOString(),
+    },
+    {
+      id: 'ra-4',
+      player: 'Rafa_R34',
+      type: 'SPEND' as const,
+      amount: 10000,
+      currency: 'clean' as const,
+      description: 'Aposta Paralela em Lucas_Drift (Bateria #42)',
+      timestamp: new Date(Date.now() - 26000000).toISOString(),
+    },
+  ];
+
+  const cutoff = Date.now() - windowMs;
+  const vehicleSales = allVehicleSales.filter((v) => new Date(v.timestamp).getTime() >= cutoff);
+  const shopSales = allShopSales.filter((s) => new Date(s.timestamp).getTime() >= cutoff);
+  const raceActivity = allRaceActivity.filter((r) => new Date(r.timestamp).getTime() >= cutoff);
+
+  const vehicleRevenue =
+    vehicleSales.reduce((acc, item) => acc + item.amount, 0) * scaleFactor;
+  const shopRevenue = shopSales.reduce((acc, item) => acc + item.amount, 0) * scaleFactor;
+  const raceEarn =
+    raceActivity
+      .filter((item) => item.type === 'EARN')
+      .reduce((acc, item) => acc + item.amount, 0) * scaleFactor;
+  const raceSpend =
+    raceActivity
+      .filter((item) => item.type === 'SPEND')
+      .reduce((acc, item) => acc + item.amount, 0) * scaleFactor;
+  const raceVolume = raceEarn + raceSpend;
+
   return {
-    vehicleSales: [
-      {
-        id: 'vs-1',
-        player: 'Vini_Apex',
-        amount: 285000,
-        vehicleName: 'Nissan GTR (R35)',
-        timestamp: new Date(Date.now() - 950000).toISOString(),
-      },
-      {
-        id: 'vs-2',
-        player: 'Gabriel_Feijo',
-        amount: 340000,
-        vehicleName: 'Porsche 911 GT3 RS',
-        timestamp: new Date(Date.now() - 5400000).toISOString(),
-      },
-      {
-        id: 'vs-3',
-        player: 'Kaio_Turbo',
-        amount: 145000,
-        vehicleName: 'Mitsubishi Lancer Evo IX',
-        timestamp: new Date(Date.now() - 12800000).toISOString(),
-      },
-    ],
-    shopSales: [
-      {
-        id: 'ss-1',
-        player: 'Lucas_Drift',
-        amount: 6400,
-        itemName: 'Kit Pneus Slick + Revisão Motor (spc_mechanic)',
-        timestamp: new Date(Date.now() - 1800000).toISOString(),
-      },
-      {
-        id: 'ss-2',
-        player: 'Rafa_R34',
-        amount: 5000,
-        itemName: 'Chip Clandestino #372 (Docas LS)',
-        timestamp: new Date(Date.now() - 4200000).toISOString(),
-      },
-      {
-        id: 'ss-3',
-        player: 'Vini_Apex',
-        amount: 850,
-        itemName: 'Abastecimento 52L Podium (spc_businessfuel)',
-        timestamp: new Date(Date.now() - 7600000).toISOString(),
-      },
-    ],
-    raceActivity: [
-      {
-        id: 'ra-1',
-        player: 'Gabriel_Feijo',
-        type: 'EARN',
-        amount: 45000,
-        currency: 'dirty',
-        description: '1º Lugar — High Stakes: El Corona -> Orla Santa Maria',
-        timestamp: new Date(Date.now() - 180000).toISOString(),
-      },
-      {
-        id: 'ra-2',
-        player: 'Lucas_Drift',
-        type: 'SPEND',
-        amount: 15000,
-        currency: 'clean',
-        description: 'Taxa de Grid — Fuga das Docas: Willowfield -> Palomino',
-        timestamp: new Date(Date.now() - 420000).toISOString(),
-      },
-      {
-        id: 'ra-3',
-        player: 'Vini_Apex',
-        type: 'EARN',
-        amount: 30000,
-        currency: 'dirty',
-        description: '1º Lugar — San Fierro Hills: Queens & Chinatown',
-        timestamp: new Date(Date.now() - 3900000).toISOString(),
-      },
-      {
-        id: 'ra-4',
-        player: 'Rafa_R34',
-        type: 'SPEND',
-        amount: 10000,
-        currency: 'clean',
-        description: 'Aposta Paralela em Lucas_Drift (Bateria #42)',
-        timestamp: new Date(Date.now() - 4100000).toISOString(),
-      },
-    ],
+    vehicleSales,
+    shopSales,
+    raceActivity,
     stats: {
-      totalRevenue: 882250,
-      vehicleRevenue: 770000,
-      shopRevenue: 12250,
-      raceVolume: 100000,
-      totalTransactions: 10,
-      vehicleCount: 3,
-      shopCount: 3,
-      raceCount: 4,
+      totalRevenue: vehicleRevenue + shopRevenue + raceVolume,
+      vehicleRevenue,
+      shopRevenue,
+      raceVolume,
+      raceEarn,
+      raceSpend,
+      totalTransactions:
+        (vehicleSales.length + shopSales.length + raceActivity.length) * scaleFactor,
+      vehicleCount: vehicleSales.length * scaleFactor,
+      shopCount: shopSales.length * scaleFactor,
+      raceCount: raceActivity.length * scaleFactor,
     },
   };
 }
 
-export function getMockFinesStats(): FinesStats {
+export function getMockFinesStats(windowHours: number = 24): FinesStats {
+  const windowMs = windowHours * 60 * 60 * 1000;
+  const cutoff = Date.now() - windowMs;
+  const scaleFactor = windowHours <= 6 ? 1 : windowHours <= 24 ? 1 : 3;
+
+  const allFines = [
+    {
+      id: 'f-1',
+      player: 'Rafa_R34',
+      plate: 'R34-9981',
+      reason: 'Excesso de velocidade (198 km/h em via de 80 km/h)',
+      amount: 4800,
+      timestamp: new Date(Date.now() - 1500000).toISOString(),
+    },
+    {
+      id: 'f-2',
+      player: 'Vini_Apex',
+      plate: 'GTR-0372',
+      reason: 'Racha clandestino e direção perigosa em Market',
+      amount: 8500,
+      timestamp: new Date(Date.now() - 3800000).toISOString(),
+    },
+    {
+      id: 'f-3',
+      player: 'Lucas_Drift',
+      plate: 'SLV-1994',
+      reason: 'Manobra de drift em cruzamento urbano (Idlewood)',
+      amount: 3200,
+      timestamp: new Date(Date.now() - 7200000).toISOString(),
+    },
+    {
+      id: 'f-4',
+      player: 'Kaio_Turbo',
+      plate: 'EVO-7710',
+      reason: 'Avanço de sinal vermelho em Pershing Square',
+      amount: 1900,
+      timestamp: new Date(Date.now() - 14400000).toISOString(),
+    },
+    {
+      id: 'f-5',
+      player: 'Vini_Apex',
+      plate: 'GTR-0372',
+      reason: 'Radar 214 km/h — Rodovia LV / Julius Thruway',
+      amount: 6400,
+      timestamp: new Date(Date.now() - 36000000).toISOString(),
+    },
+  ];
+
+  const recentFines = allFines.filter((fine) => new Date(fine.timestamp).getTime() >= cutoff);
+  const byPlayer = new Map<string, { username: string; count: number; totalAmount: number }>();
+
+  for (const fine of recentFines) {
+    const existing = byPlayer.get(fine.player) || {
+      username: fine.player,
+      count: 0,
+      totalAmount: 0,
+    };
+    existing.count += scaleFactor;
+    existing.totalAmount += fine.amount * scaleFactor;
+    byPlayer.set(fine.player, existing);
+  }
+
+  const topPlayers = Array.from(byPlayer.values()).sort(
+    (a, b) => b.totalAmount - a.totalAmount,
+  );
+  const totalAmount = recentFines.reduce((acc, f) => acc + f.amount, 0) * scaleFactor;
+
   return {
     summary: {
-      totalFines: 14,
-      totalAmount: 58400,
+      totalFines: recentFines.length * scaleFactor,
+      totalAmount,
     },
-    recentFines: [
-      {
-        id: 'f-1',
-        player: 'Rafa_R34',
-        plate: 'R34-9981',
-        reason: 'Excesso de velocidade (198 km/h em via de 80 km/h)',
-        amount: 4800,
-        timestamp: new Date(Date.now() - 1500000).toISOString(),
-      },
-      {
-        id: 'f-2',
-        player: 'Vini_Apex',
-        plate: 'GTR-0372',
-        reason: 'Racha clandestino e direção perigosa em Market',
-        amount: 8500,
-        timestamp: new Date(Date.now() - 3800000).toISOString(),
-      },
-      {
-        id: 'f-3',
-        player: 'Lucas_Drift',
-        plate: 'SLV-1994',
-        reason: 'Manobra de drift em cruzamento urbano (Idlewood)',
-        amount: 3200,
-        timestamp: new Date(Date.now() - 7200000).toISOString(),
-      },
-      {
-        id: 'f-4',
-        player: 'Kaio_Turbo',
-        plate: 'EVO-7710',
-        reason: 'Avanço de sinal vermelho em Pershing Square',
-        amount: 1900,
-        timestamp: new Date(Date.now() - 14400000).toISOString(),
-      },
-    ],
-    topPlayers: [
-      { username: 'Vini_Apex', count: 5, totalAmount: 24500 },
-      { username: 'Rafa_R34', count: 4, totalAmount: 18200 },
-      { username: 'Lucas_Drift', count: 3, totalAmount: 9800 },
-      { username: 'Kaio_Turbo', count: 2, totalAmount: 5900 },
-    ],
+    recentFines,
+    topPlayers,
   };
 }

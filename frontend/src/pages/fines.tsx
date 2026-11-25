@@ -86,7 +86,9 @@ export default function Fines() {
             <div>
               <CardTitle>Registro de Autuações de Trânsito</CardTitle>
               <CardDescription>
-                Infrações capturadas por radares (`spc_trafi` / `placa`).
+                Infrações capturadas por radares (
+                <code className="font-mono text-brass">spc_trafi</code> /{' '}
+                <code className="font-mono text-brass">placa</code>).
               </CardDescription>
             </div>
             <Badge variant="default" className="font-mono">

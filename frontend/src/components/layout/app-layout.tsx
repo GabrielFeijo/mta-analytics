@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -25,12 +25,13 @@ interface AppLayoutProps {
   children: ReactNode;
 }
 
-const NAVIGATION = [
-  { name: 'Visão Geral & Mapa', href: '/', icon: Activity, code: '01' },
-  { name: 'Jogadores Online', href: '/players', icon: Users, code: '02' },
-  { name: 'Economia & Fluxo', href: '/economy', icon: DollarSign, code: '03' },
-  { name: 'Radar de Multas', href: '/fines', icon: FileWarning, code: '04' },
-  { name: 'Lojas & Corridas', href: '/resources', icon: Flag, code: '05' },
+const BASE_NAVIGATION = [
+  { name: 'Visão Geral & Mapa', href: '/', icon: Activity, code: '01', adminOnly: false },
+  { name: 'Jogadores Online', href: '/players', icon: Users, code: '02', adminOnly: false },
+  { name: 'Economia & Fluxo', href: '/economy', icon: DollarSign, code: '03', adminOnly: false },
+  { name: 'Radar de Multas', href: '/fines', icon: FileWarning, code: '04', adminOnly: false },
+  { name: 'Lojas & Corridas', href: '/resources', icon: Flag, code: '05', adminOnly: false },
+  { name: 'Operadores RBAC', href: '/operators', icon: ShieldCheck, code: '06', adminOnly: true },
 ] as const;
 
 function LayoutShell({ children }: AppLayoutProps) {
@@ -39,13 +40,28 @@ function LayoutShell({ children }: AppLayoutProps) {
   const { user, isDemoMode } = useAuthStore();
   const { isConnected } = useAnalyticsSocket();
 
+  useEffect(() => {
+    if (!mobileOpen) return undefined;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMobileOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [mobileOpen]);
+
+  const navigation = BASE_NAVIGATION.filter(
+    (item) => !item.adminOnly || user?.role === 'ADMIN',
+  );
+
   const { data: serverStatus } = useQuery({
     queryKey: ['server-status'],
     queryFn: analyticsApi.getServerStatus,
     refetchInterval: 30000,
   });
 
-  const activeNav = NAVIGATION.find((n) => n.href === location.pathname) ?? NAVIGATION[0];
+  const activeNav = navigation.find((n) => n.href === location.pathname) ?? navigation[0];
 
   const handleLogout = () => {
     void authApi.logout();
@@ -91,7 +107,7 @@ function LayoutShell({ children }: AppLayoutProps) {
         </div>
 
         <nav className="flex-1 space-y-0.5 px-2.5">
-          {NAVIGATION.map((item) => {
+          {navigation.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.href;
 
@@ -136,7 +152,7 @@ function LayoutShell({ children }: AppLayoutProps) {
                 </p>
                 <p className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider text-ink-faint">
                   <ShieldCheck className="h-3 w-3 text-brass" strokeWidth={1.75} />
-                  {user?.role || 'ADMIN'}
+                  {user?.role || 'VIEWER'}
                 </p>
               </div>
             </div>

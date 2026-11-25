@@ -22,7 +22,7 @@ export default function Register() {
 
     try {
       await authApi.register(username, email, password);
-      navigate('/login');
+      navigate('/login', { state: { registered: true } });
     } catch (err) {
       const axiosErr = err as AxiosError<{ message?: string | string[] }>;
       const msg = axiosErr.response?.data?.message;
@@ -60,8 +60,11 @@ export default function Register() {
             )}
 
             <div>
-              <label className="mb-1 block text-2xs text-ink-dim">Identificação (Usuário)</label>
+              <label htmlFor="reg-username" className="mb-1 block text-2xs text-ink-dim">
+                Identificação (Usuário)
+              </label>
               <Input
+                id="reg-username"
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
@@ -71,8 +74,11 @@ export default function Register() {
             </div>
 
             <div>
-              <label className="mb-1 block text-2xs text-ink-dim">E-mail Operacional</label>
+              <label htmlFor="reg-email" className="mb-1 block text-2xs text-ink-dim">
+                E-mail Operacional
+              </label>
               <Input
+                id="reg-email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -82,8 +88,11 @@ export default function Register() {
             </div>
 
             <div>
-              <label className="mb-1 block text-2xs text-ink-dim">Chave de Acesso</label>
+              <label htmlFor="reg-password" className="mb-1 block text-2xs text-ink-dim">
+                Chave de Acesso
+              </label>
               <Input
+                id="reg-password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

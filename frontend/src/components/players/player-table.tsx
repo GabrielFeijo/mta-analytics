@@ -10,7 +10,12 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Player } from '@/types/telemetry';
-import { formatCurrency, formatDate, formatPlaytimeHours } from '@/lib/formatters';
+import {
+  formatCurrency,
+  formatDate,
+  formatPlaytimeHours,
+  resolvePlayerPlaytime,
+} from '@/lib/formatters';
 
 interface PlayerTableProps {
   players: Player[];
@@ -91,7 +96,7 @@ export function PlayerTable({ players, onViewPlayer }: PlayerTableProps) {
                 </Badge>
               </TableCell>
               <TableCell className="whitespace-nowrap text-right font-mono tabular-nums text-ink-dim">
-                {formatPlaytimeHours(player.totalPlaytime || player.playedTime)}
+                {formatPlaytimeHours(resolvePlayerPlaytime(player))}
               </TableCell>
               <TableCell className="whitespace-nowrap text-right font-mono text-2xs tabular-nums text-ink-faint">
                 {formatDate(player.lastSeen)}

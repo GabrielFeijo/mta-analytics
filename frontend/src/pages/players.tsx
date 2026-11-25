@@ -27,6 +27,7 @@ export default function Players() {
   } = useQuery({
     queryKey: ['online-players'],
     queryFn: playersApi.getOnlinePlayers,
+    enabled: !isSearching,
     refetchInterval: 10000,
   });
 
@@ -85,6 +86,11 @@ export default function Players() {
         </CardHeader>
 
         <CardContent className="p-0">
+          {searchQuery.trim().length === 1 && (
+            <div className="border-b border-line bg-bg2/60 px-4 py-1.5 text-2xs text-ink-dim">
+              Digite ao menos 2 caracteres para buscar em toda a base de pilotos.
+            </div>
+          )}
           {activeError ? (
             <div className="p-4">
               <QueryErrorState

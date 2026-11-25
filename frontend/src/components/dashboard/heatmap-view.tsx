@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Compass, Flame, Layers } from 'lucide-react';
 import { analyticsApi } from '@/services/analytics-api';
 import {
+  HOT_INTENSITY_THRESHOLD,
   canvasToWorld,
   renderHeatmapCanvas,
   resolveRegionLabel,
@@ -26,9 +27,12 @@ export function HeatmapView() {
   const mapImageRef = useRef<HTMLImageElement | null>(null);
   const [selectedLayer, setSelectedLayer] = useState<string>('player_position');
   const [windowHours, setWindowHours] = useState<number>(24);
-  const [hoverCoords, setHoverCoords] = useState<{ x: number; y: number; zone: string } | null>(
-    null,
-  );
+  const [hoverCoords, setHoverCoords] = useState<{
+    x: number;
+    y: number;
+    zone: string;
+    hotspotCount?: number;
+  } | null>(null);
   const [mapReady, setMapReady] = useState(false);
 
   const {
@@ -54,6 +58,9 @@ export function HeatmapView() {
       mapImageRef.current = img;
       setMapReady(true);
     };
+    return () => {
+      img.onload = null;
+    };
   }, []);
 
   useEffect(() => {
@@ -61,7 +68,14 @@ export function HeatmapView() {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    renderHeatmapCanvas(ctx, canvas.width, heatmapData, mapImageRef.current);
+
+    const logicalSize = 640;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    canvas.width = logicalSize * dpr;
+    canvas.height = logicalSize * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    renderHeatmapCanvas(ctx, logicalSize, heatmapData, mapImageRef.current);
   }, [heatmapData, mapReady]);
 
   const handleMouseMove = (event: React.MouseEvent<HTMLCanvasElement>) => {
@@ -70,7 +84,24 @@ export function HeatmapView() {
     const rect = canvas.getBoundingClientRect();
     const normX = (event.clientX - rect.left) / rect.width;
     const normY = (event.clientY - rect.top) / rect.height;
-    setHoverCoords(canvasToWorld(normX, normY));
+    const world = canvasToWorld(normX, normY);
+
+    let nearestCount: number | undefined;
+    let bestDistSq = 180 * 180;
+    for (const point of heatmapData) {
+      const dx = (Number(point.x) || 0) - world.x;
+      const dy = (Number(point.y) || 0) - world.y;
+      const distSq = dx * dx + dy * dy;
+      if (distSq <= bestDistSq) {
+        bestDistSq = distSq;
+        nearestCount = Number(point.count) || 0;
+      }
+    }
+
+    setHoverCoords({
+      ...world,
+      hotspotCount: nearestCount,
+    });
   };
 
   if (isError) {
@@ -151,6 +182,15 @@ export function HeatmapView() {
                   <span className="tabular-nums">
                     X:{hoverCoords.x} Y:{hoverCoords.y}
                   </span>
+                  {hoverCoords.hotspotCount !== undefined && (
+                    <>
+                      <span className="text-ink-faint">·</span>
+                      <span className="text-signal">
+                        {hoverCoords.hotspotCount}{' '}
+                        {hoverCoords.hotspotCount === 1 ? 'ocorrência' : 'ocorrências'}
+                      </span>
+                    </>
+                  )}
                 </>
               ) : (
                 <span className="text-ink-dim">
@@ -196,7 +236,7 @@ export function HeatmapView() {
               const count = Number(spot.count) || 0;
               const zone = spot.label || resolveRegionLabel(x, y);
               const pct = Math.round(Math.min(1, Number(spot.intensity) || 0) * 100);
-              const isHot = pct >= 75;
+              const isHot = (Number(spot.intensity) || 0) >= HOT_INTENSITY_THRESHOLD;
 
               return (
                 <div

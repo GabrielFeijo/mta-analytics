@@ -43,3 +43,10 @@ export function formatPlaytimeHours(minutes?: number): string {
   if (hours === 0) return `${remMin}m`;
   return remMin > 0 ? `${hours}h ${remMin}m` : `${hours}h`;
 }
+
+export function resolvePlayerPlaytime(player: {
+  playedTime?: number;
+  totalPlaytime?: number;
+}): number {
+  return Math.max(Number(player.playedTime) || 0, Number(player.totalPlaytime) || 0);
+}

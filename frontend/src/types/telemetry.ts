@@ -7,9 +7,19 @@ export interface AuthUser {
   role: UserRole;
 }
 
+export interface OperatorRecord extends AuthUser {
+  createdAt: string;
+  updatedAt?: string;
+}
+
 export interface LoginResponse {
   access_token: string;
   user: AuthUser;
+}
+
+export interface EconomyTimeSeriesPoint {
+  timestamp: string;
+  value: number;
 }
 
 export interface ServerStatus {
@@ -148,6 +158,7 @@ export interface VehicleSaleItem {
   id: string;
   player: string;
   amount: number;
+  source?: string;
   vehicleName: string;
   timestamp: string;
 }
@@ -156,6 +167,7 @@ export interface ShopSaleItem {
   id: string;
   player: string;
   amount: number;
+  source?: string;
   itemName: string;
   timestamp: string;
 }
@@ -179,6 +191,8 @@ export interface ResourcesStats {
     vehicleRevenue: number;
     shopRevenue: number;
     raceVolume: number;
+    raceEarn?: number;
+    raceSpend?: number;
     totalTransactions: number;
     vehicleCount: number;
     shopCount: number;

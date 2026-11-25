@@ -11,7 +11,13 @@ import { TelemetryMeter } from './telemetry-meter';
 import { analyticsApi } from '@/services/analytics-api';
 import { playersApi } from '@/services/players-api';
 import { Player, PlayerActivityEvent } from '@/types/telemetry';
-import { formatCurrency, formatPlaytimeHours, formatTime } from '@/lib/formatters';
+import { QueryErrorState } from '@/components/common/query-error-state';
+import {
+  formatCurrency,
+  formatPlaytimeHours,
+  formatTime,
+  resolvePlayerPlaytime,
+} from '@/lib/formatters';
 
 interface PlayerDetailsDialogProps {
   playerId: number | null;
@@ -24,7 +30,12 @@ export function PlayerDetailsDialog({
   open,
   onOpenChange,
 }: PlayerDetailsDialogProps) {
-  const { data: player, isLoading } = useQuery<Player>({
+  const {
+    data: player,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery<Player>({
     queryKey: ['player', playerId],
     queryFn: () => playersApi.getPlayer(playerId!),
     enabled: Boolean(playerId) && open,
@@ -52,6 +63,11 @@ export function PlayerDetailsDialog({
           <div className="py-10 text-center text-xs text-ink-dim">
             Carregando telemetria do jogador…
           </div>
+        ) : isError ? (
+          <QueryErrorState
+            message="Falha ao carregar os dados de telemetria deste piloto."
+            onRetry={() => void refetch()}
+          />
         ) : player ? (
           <div className="space-y-4">
             <div className="flex items-center justify-between gap-3 rounded-sm border border-line bg-bg2 p-3">
@@ -109,7 +125,7 @@ export function PlayerDetailsDialog({
                 <div className="mt-0.5 font-mono text-[13px] font-medium tabular-nums text-brass">
                   {player.premiumPoints || 0} VP ·{' '}
                   <span className="text-ink">
-                    {formatPlaytimeHours(player.totalPlaytime || player.playedTime)}
+                    {formatPlaytimeHours(resolvePlayerPlaytime(player))}
                   </span>
                 </div>
               </div>

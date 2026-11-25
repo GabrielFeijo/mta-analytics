@@ -3,13 +3,18 @@ import { HeatmapPoint } from '@/types/telemetry';
 const WORLD_SPAN = 6000;
 const WORLD_HALF = 3000;
 
+export const HOT_INTENSITY_THRESHOLD = 0.65;
+
 export function resolveRegionLabel(x: number, y: number): string {
-  if (x > 1800 && y < -1800) return 'El Corona / Docas LS';
-  if (x > 500 && y < -800) return 'Los Santos (Urbano)';
-  if (x < -1200 && y > -800 && y < 1500) return 'San Fierro';
-  if (x > 900 && y > 600) return 'Las Venturas';
-  if (x > 1200 && y > -400 && y <= 600) return 'Red County / Palomino';
-  if (x <= 900 && y > 600) return 'Bone County / Rota 69';
+  if (x > 1650 && y < -1750) return 'El Corona / Docas LS';
+  if (x > 1100 && y < -450) return 'Los Santos (Centro / Leste)';
+  if (x > 0 && y < -450) return 'Los Santos Oeste / Rodeo';
+  if (x <= 0 && y < -600) return 'Flint / Whetstone';
+  if (x < -1150 && y >= -600 && y < 1500) return 'San Fierro';
+  if (x < -600 && y >= 1500) return 'Tierra Robada / Bayside';
+  if (x > 0 && y >= -450 && y <= 550) return 'Red County / Palomino';
+  if (x >= 850 && y > 550) return 'Las Venturas';
+  if (x >= -600 && x < 850 && y > 550) return 'Bone County / Deserto';
   return 'Interior de San Andreas';
 }
 
@@ -64,7 +69,7 @@ export function renderHeatmapCanvas(
     const { px, py } = worldToCanvas(Number(point.x) || 0, Number(point.y) || 0, size);
     const intensity = Math.max(0.15, Math.min(1, Number(point.intensity) || 0.25));
     const radius = 16 + intensity * 20;
-    const isHot = intensity >= 0.65;
+    const isHot = intensity >= HOT_INTENSITY_THRESHOLD;
 
     const gradient = ctx.createRadialGradient(px, py, 0, px, py, radius);
     if (isHot) {
